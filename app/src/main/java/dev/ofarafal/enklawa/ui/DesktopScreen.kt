@@ -73,6 +73,7 @@ private val Apps = listOf(
     AppSpec("browser", "Przeglądarka", Glyph.Globe, Color(0xFF5BC8FF), Color(0xFF1565C0), true),
     AppSpec("notes", "Notatki", Glyph.Notes, Color(0xFFFFD866), Color(0xFFF08A00), false),
     AppSpec("files", "Pliki", Glyph.Folder, Color(0xFF8EE08F), Color(0xFF2E7D32), false),
+    AppSpec("settings", "Ustawienia", Glyph.Settings, Color(0xFF9FB4C7), Color(0xFF3B4C5E), true),
     AppSpec("chat", "Komunikator", Glyph.Chat, Color(0xFFD08CE6), Color(0xFF6A1B9A), false),
     AppSpec("tor", "Tor", Glyph.Onion, Color(0xFFA48BE0), Color(0xFF311B92), false),
     AppSpec("vaults", "Magazyny", Glyph.Lock, Color(0xFFFF9E80), Color(0xFFD84315), false),
@@ -87,6 +88,7 @@ fun DesktopScreen(
     isolatedProfile: Boolean,
     amnesia: Boolean,
     onOpenBrowser: () -> Unit,
+    onOpenSettings: () -> Unit,
     onExit: () -> Unit,
 ) {
     val ctx = LocalContext.current
@@ -97,6 +99,7 @@ fun DesktopScreen(
         drawerOpen = false
         when {
             app.id == "browser" -> onOpenBrowser()
+            app.id == "settings" -> onOpenSettings()
             else -> Toast.makeText(ctx, "${app.label} — w kolejnych wersjach", Toast.LENGTH_SHORT).show()
         }
     }

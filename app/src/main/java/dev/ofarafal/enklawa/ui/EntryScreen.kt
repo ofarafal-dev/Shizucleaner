@@ -1,8 +1,5 @@
 package dev.ofarafal.enklawa.ui
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,33 +16,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import dev.ofarafal.enklawa.BuildConfig
-import dev.ofarafal.enklawa.update.CheckResult
-import dev.ofarafal.enklawa.update.Updater
-import kotlinx.coroutines.launch
+import dev.ofarafal.enklawa.Prefs
 
 @Composable
 fun EntryScreen(onEnter: (amnesia: Boolean) -> Unit) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var check by remember { mutableStateOf<CheckResult?>(null) }
-    var progress by remember { mutableStateOf<Float?>(null) }
-    var message by remember { mutableStateOf<String?>(null) }
     var amnesia by remember { mutableStateOf(false) } // domyślnie wyłączona
-
-    LaunchedEffect(Unit) { check = Updater.check() }
 
     Column(
         Modifier
@@ -95,42 +80,6 @@ fun EntryScreen(onEnter: (amnesia: Boolean) -> Unit) {
         )
 
         Spacer(Modifier.height(8.dp))
-        Text("Wersja ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelMedium)
-
-        when (val c = check) {
-            null -> Text("Sprawdzam aktualizacje…", style = MaterialTheme.typography.bodySmall)
-            is CheckResult.UpToDate -> Text("Masz najnowszą wersję.", style = MaterialTheme.typography.bodySmall)
-            is CheckResult.Error -> Text(c.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            is CheckResult.Available -> {
-                Text("Dostępna wersja ${c.info.versionName}", style = MaterialTheme.typography.bodyMedium)
-                Button(
-                    enabled = progress == null,
-                    onClick = {
-                        if (!ctx.packageManager.canRequestPackageInstalls()) {
-                            ctx.startActivity(
-                                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}"))
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            )
-                            message = "Zezwól na instalację z tego źródła, wróć i dotknij ponownie."
-                            return@Button
-                        }
-                        scope.launch {
-                            try {
-                                progress = 0f
-                                val apk = Updater.download(ctx, c.info) { progress = it }
-                                Updater.install(ctx, apk)
-                                message = "Instalowanie…"
-                            } catch (e: Exception) {
-                                message = e.message ?: "Aktualizacja nieudana"
-                            } finally {
-                                progress = null
-                            }
-                        }
-                    },
-                ) { Text("Pobierz i zainstaluj") }
-            }
-        }
-        progress?.let { p -> LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth()) }
-        message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        UpdatePanel(autoCheck = Prefs.autoUpdateCheck(ctx), modifier = Modifier.fillMaxWidth())
     }
 }

@@ -28,8 +28,9 @@ import dev.ofarafal.enklawa.ui.BrowserScreen
 import dev.ofarafal.enklawa.ui.DesktopScreen
 import dev.ofarafal.enklawa.ui.EnklawaTheme
 import dev.ofarafal.enklawa.ui.EntryScreen
+import dev.ofarafal.enklawa.ui.SettingsScreen
 
-private enum class Screen { Desktop, Browser }
+private enum class Screen { Desktop, Browser, Settings }
 
 class MainActivity : ComponentActivity() {
 
@@ -63,13 +64,14 @@ class MainActivity : ComponentActivity() {
                         }
                         s == null || p == null -> EntryScreen(onEnter = ::enterWorld)
                         else -> Crossfade(targetState = screen, animationSpec = tween(260), label = "screen") { sc ->
-                            if (sc == Screen.Browser) {
-                                BrowserScreen(p, onClose = { screen = Screen.Desktop })
-                            } else {
-                                DesktopScreen(
+                            when (sc) {
+                                Screen.Browser -> BrowserScreen(p, onClose = { screen = Screen.Desktop })
+                                Screen.Settings -> SettingsScreen(amnesia = amnesia, onBack = { screen = Screen.Desktop })
+                                Screen.Desktop -> DesktopScreen(
                                     isolatedProfile = p.isolated,
                                     amnesia = amnesia,
                                     onOpenBrowser = { screen = Screen.Browser },
+                                    onOpenSettings = { screen = Screen.Settings },
                                     onExit = ::exitWorld,
                                 )
                             }

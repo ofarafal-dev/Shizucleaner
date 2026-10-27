@@ -63,6 +63,20 @@ class BrowserProfile private constructor(
             return BrowserProfile(name, true)
         }
 
+        /** Czyści trwały profil zwykłego świata (ustawienia → „Wyczyść dane przeglądarki”). */
+        fun wipePersistent(): Boolean = runCatching {
+            if (isSupported()) {
+                val store = ProfileStore.getInstance()
+                store.deleteProfile(PERSISTENT_NAME)
+                store.getOrCreateProfile(PERSISTENT_NAME) // następne wejście ma od razu pusty profil
+            } else {
+                CookieManager.getInstance().removeAllCookies(null)
+                CookieManager.getInstance().flush()
+                WebStorage.getInstance().deleteAllData()
+            }
+            true
+        }.getOrDefault(false)
+
         /** Usuwa profile `enk_*` zostawione przez poprzedni, przerwany proces. Zwraca liczbę usuniętych. */
         fun sweepLeftovers(): Int {
             if (!isSupported()) return 0
