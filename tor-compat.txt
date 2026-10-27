@@ -1,0 +1,160 @@
+== 0.4.7.14
+aarFormatVersion=1.0
+aarMetadataVersion=1.0
+minCompileSdk=1
+minAndroidGradlePluginVersion=1.0.0
+
+  <artifactId>tor-android</artifactId>
+  <version>0.4.7.14</version>
+
+public class org.torproject.jni.TorService$LocalBinder extends android.os.Binder {
+  public org.torproject.jni.TorService$LocalBinder(org.torproject.jni.TorService);
+  public org.torproject.jni.TorService getService();
+  public static final java.lang.String ACTION_START = "org.torproject.android.intent.action.START";
+  public static final java.lang.String ACTION_STATUS = "org.torproject.android.intent.action.STATUS";
+  public static final java.lang.String ACTION_ERROR = "org.torproject.android.intent.action.ERROR";
+  public static final java.lang.String EXTRA_STATUS = "org.torproject.android.intent.extra.STATUS";
+  public static final java.lang.String EXTRA_PACKAGE_NAME = "org.torproject.android.intent.extra.PACKAGE_NAME";
+  public static final java.lang.String EXTRA_SERVICE_PACKAGE_NAME = "org.torproject.android.intent.extra.SERVICE_PACKAGE_NAME";
+  public static final java.lang.String STATUS_OFF = "OFF";
+  public static final java.lang.String STATUS_ON = "ON";
+  public static final java.lang.String STATUS_STARTING = "STARTING";
+  public static final java.lang.String STATUS_STOPPING = "STOPPING";
+  public int getSocksPort();
+== 0.4.8.17
+aarFormatVersion=1.0
+aarMetadataVersion=1.0
+minCompileSdk=1
+minCompileSdkExtension=0
+minAndroidGradlePluginVersion=1.0.0
+coreLibraryDesugaringEnabled=false
+
+  <artifactId>tor-android</artifactId>
+  <version>0.4.8.17</version>
+      <artifactId>localbroadcastmanager</artifactId>
+      <version>1.1.0</version>
+      <scope>compile</scope>
+      <artifactId>jtorctl</artifactId>
+      <version>0.4.5.7</version>
+      <scope>compile</scope>
+
+public class org.torproject.jni.TorService$LocalBinder extends android.os.Binder {
+  public org.torproject.jni.TorService$LocalBinder(org.torproject.jni.TorService);
+  public org.torproject.jni.TorService getService();
+  public static final java.lang.String ACTION_START = "org.torproject.android.intent.action.START";
+  public static final java.lang.String ACTION_STATUS = "org.torproject.android.intent.action.STATUS";
+  public static final java.lang.String ACTION_ERROR = "org.torproject.android.intent.action.ERROR";
+  public static final java.lang.String EXTRA_STATUS = "org.torproject.android.intent.extra.STATUS";
+  public static final java.lang.String EXTRA_PACKAGE_NAME = "org.torproject.android.intent.extra.PACKAGE_NAME";
+  public static final java.lang.String EXTRA_SERVICE_PACKAGE_NAME = "org.torproject.android.intent.extra.SERVICE_PACKAGE_NAME";
+  public static final java.lang.String STATUS_OFF = "OFF";
+  public static final java.lang.String STATUS_ON = "ON";
+  public static final java.lang.String STATUS_STARTING = "STARTING";
+  public static final java.lang.String STATUS_STOPPING = "STOPPING";
+  public int getSocksPort();
+== 0.4.8.22
+aarFormatVersion=1.0
+aarMetadataVersion=1.0
+minCompileSdk=1
+minCompileSdkExtension=0
+minAndroidGradlePluginVersion=1.0.0
+coreLibraryDesugaringEnabled=false
+
+  <artifactId>tor-android</artifactId>
+  <version>0.4.8.22</version>
+      <artifactId>localbroadcastmanager</artifactId>
+      <version>1.1.0</version>
+      <scope>compile</scope>
+      <artifactId>jtorctl</artifactId>
+      <version>0.4.5.7</version>
+      <scope>compile</scope>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>2.3.0</version>
+      <scope>compile</scope>
+
+public class org.torproject.jni.TorService$LocalBinder extends android.os.Binder {
+  public org.torproject.jni.TorService$LocalBinder(org.torproject.jni.TorService);
+  public org.torproject.jni.TorService getService();
+  public static final java.lang.String ACTION_START = "org.torproject.android.intent.action.START";
+  public static final java.lang.String ACTION_STOP = "org.torproject.android.intent.action.STOP";
+  public static final java.lang.String ACTION_STATUS = "org.torproject.android.intent.action.STATUS";
+  public static final java.lang.String ACTION_ERROR = "org.torproject.android.intent.action.ERROR";
+  public static final java.lang.String EXTRA_STATUS = "org.torproject.android.intent.extra.STATUS";
+  public static final java.lang.String EXTRA_PACKAGE_NAME = "org.torproject.android.intent.extra.PACKAGE_NAME";
+  public static final java.lang.String EXTRA_SERVICE_PACKAGE_NAME = "org.torproject.android.intent.extra.SERVICE_PACKAGE_NAME";
+  public static final java.lang.String STATUS_OFF = "OFF";
+  public static final java.lang.String STATUS_ON = "ON";
+  public static final java.lang.String STATUS_STARTING = "STARTING";
+  public static final java.lang.String STATUS_STOPPING = "STOPPING";
+  public int getSocksPort();
+== 0.4.9.5
+aarFormatVersion=1.0
+aarMetadataVersion=1.0
+minCompileSdk=1
+minCompileSdkExtension=0
+minAndroidGradlePluginVersion=1.0.0
+coreLibraryDesugaringEnabled=false
+
+  <artifactId>tor-android</artifactId>
+  <version>0.4.9.5</version>
+      <artifactId>localbroadcastmanager</artifactId>
+      <version>1.1.0</version>
+      <scope>compile</scope>
+      <artifactId>jtorctl</artifactId>
+      <version>0.4.5.7</version>
+      <scope>compile</scope>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>2.3.0</version>
+      <scope>compile</scope>
+
+public class org.torproject.jni.TorService$LocalBinder extends android.os.Binder {
+  public org.torproject.jni.TorService$LocalBinder(org.torproject.jni.TorService);
+  public org.torproject.jni.TorService getService();
+  public static final java.lang.String ACTION_START = "org.torproject.android.intent.action.START";
+  public static final java.lang.String ACTION_STOP = "org.torproject.android.intent.action.STOP";
+  public static final java.lang.String ACTION_STATUS = "org.torproject.android.intent.action.STATUS";
+  public static final java.lang.String ACTION_ERROR = "org.torproject.android.intent.action.ERROR";
+  public static final java.lang.String EXTRA_STATUS = "org.torproject.android.intent.extra.STATUS";
+  public static final java.lang.String EXTRA_PACKAGE_NAME = "org.torproject.android.intent.extra.PACKAGE_NAME";
+  public static final java.lang.String EXTRA_SERVICE_PACKAGE_NAME = "org.torproject.android.intent.extra.SERVICE_PACKAGE_NAME";
+  public static final java.lang.String STATUS_OFF = "OFF";
+  public static final java.lang.String STATUS_ON = "ON";
+  public static final java.lang.String STATUS_STARTING = "STARTING";
+  public static final java.lang.String STATUS_STOPPING = "STOPPING";
+  public int getSocksPort();
+== 0.4.9.8
+aarFormatVersion=1.0
+aarMetadataVersion=1.0
+minCompileSdk=37
+minCompileMinorSdk=0
+minCompileSdkExtension=0
+minAndroidGradlePluginVersion=1.0.0
+coreLibraryDesugaringEnabled=false
+
+  <artifactId>tor-android</artifactId>
+  <version>0.4.9.8</version>
+      <artifactId>localbroadcastmanager</artifactId>
+      <version>1.1.0</version>
+      <scope>compile</scope>
+      <artifactId>jtorctl</artifactId>
+      <version>0.4.5.7</version>
+      <scope>compile</scope>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>2.2.10</version>
+      <scope>compile</scope>
+
+public class org.torproject.jni.TorService$LocalBinder extends android.os.Binder {
+  public org.torproject.jni.TorService$LocalBinder(org.torproject.jni.TorService);
+  public org.torproject.jni.TorService getService();
+  public static final java.lang.String ACTION_START = "org.torproject.android.intent.action.START";
+  public static final java.lang.String ACTION_STOP = "org.torproject.android.intent.action.STOP";
+  public static final java.lang.String ACTION_STATUS = "org.torproject.android.intent.action.STATUS";
+  public static final java.lang.String ACTION_ERROR = "org.torproject.android.intent.action.ERROR";
+  public static final java.lang.String EXTRA_STATUS = "org.torproject.android.intent.extra.STATUS";
+  public static final java.lang.String EXTRA_PACKAGE_NAME = "org.torproject.android.intent.extra.PACKAGE_NAME";
+  public static final java.lang.String EXTRA_SERVICE_PACKAGE_NAME = "org.torproject.android.intent.extra.SERVICE_PACKAGE_NAME";
+  public static final java.lang.String STATUS_OFF = "OFF";
+  public static final java.lang.String STATUS_ON = "ON";
+  public static final java.lang.String STATUS_STARTING = "STARTING";
+  public static final java.lang.String STATUS_STOPPING = "STOPPING";
+  public int getSocksPort();
