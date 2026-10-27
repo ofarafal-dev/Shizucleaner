@@ -1,0 +1,89 @@
+++ cat ../version.txt
++ echo 'version: 0.4.9.14'
+version: 0.4.9.14
++ echo
+
++ echo '== files'
+== files
++ cd aar
++ find . -type f
++ sort
++ xargs ls -l
+-rw-r--r-- 1 runner runner     371 Feb  1  1980 ./AndroidManifest.xml
+-rw-r--r-- 1 runner runner     178 Feb  1  1980 ./META-INF/com/android/build/gradle/aar-metadata.properties
+-rw-r--r-- 1 runner runner       0 Feb  1  1980 ./R.txt
+-rw-r--r-- 1 runner runner   11756 Feb  1  1980 ./classes.jar
+-rw-r--r-- 1 runner runner 7580256 Feb  1  1980 ./jni/arm64-v8a/libtor.so
+-rw-r--r-- 1 runner runner 6819684 Feb  1  1980 ./jni/armeabi-v7a/libtor.so
+-rw-r--r-- 1 runner runner 7229832 Feb  1  1980 ./jni/x86/libtor.so
+-rw-r--r-- 1 runner runner 8445824 Feb  1  1980 ./jni/x86_64/libtor.so
++ echo
+
++ echo '== manifest'
+== manifest
++ cat aar/AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.torproject.jni" >
+
+    <uses-sdk android:minSdkVersion="24" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application>
+        <service android:name="org.torproject.jni.TorService" />
+    </application>
+
+</manifest>+ echo
+
++ echo '== javap'
+== javap
++ mkdir cls
++ cd cls
++ unzip -q ../aar/classes.jar
++ find cls -name '*.class'
++ sed 's|cls/||;s|\.class$||;s|/|.|g'
++ grep -v '\$[0-9]'
++ xargs javap -public -constants -cp cls
+Compiled from "BuildConfig.java"
+public final class org.torproject.jni.BuildConfig {
+  public static final boolean DEBUG = false;
+  public static final java.lang.String LIBRARY_PACKAGE_NAME = "org.torproject.jni";
+  public static final java.lang.String BUILD_TYPE = "release";
+  public static final int VERSION_CODE = 49140;
+  public static final java.lang.String VERSION_NAME = "0.4.9.14";
+  public org.torproject.jni.BuildConfig();
+}
+Compiled from "TorService.java"
+public class org.torproject.jni.TorService$LocalBinder extends android.os.Binder {
+  public org.torproject.jni.TorService$LocalBinder(org.torproject.jni.TorService);
+  public org.torproject.jni.TorService getService();
+}
+Compiled from "TorService.java"
+public class org.torproject.jni.TorService extends android.app.Service implements net.freehaven.tor.control.TorControlCommands {
+  public static final java.lang.String TAG = "TorService";
+  public static final java.lang.String VERSION_NAME = "0.4.9.14";
+  public static final java.lang.String ACTION_START = "org.torproject.android.intent.action.START";
+  public static final java.lang.String ACTION_STOP = "org.torproject.android.intent.action.STOP";
+  public static final java.lang.String ACTION_STATUS = "org.torproject.android.intent.action.STATUS";
+  public static final java.lang.String ACTION_ERROR = "org.torproject.android.intent.action.ERROR";
+  public static final java.lang.String EXTRA_STATUS = "org.torproject.android.intent.extra.STATUS";
+  public static final java.lang.String EXTRA_SERVICE_PACKAGE_NAME = "org.torproject.android.intent.extra.SERVICE_PACKAGE_NAME";
+  public static final java.lang.String STATUS_OFF = "OFF";
+  public static final java.lang.String STATUS_ON = "ON";
+  public static final java.lang.String STATUS_STARTING = "STARTING";
+  public static final java.lang.String STATUS_STOPPING = "STOPPING";
+  public static final java.lang.String STATUS_CLIENT_CIRCUIT_ESTABLISHED = "CIRCUIT_ESTABLISHED";
+  public org.torproject.jni.TorService();
+  public static java.io.File getTorrc(android.content.Context);
+  public static java.io.File getDefaultsTorrc(android.content.Context);
+  public static java.lang.String getBroadcastPackageName(android.content.Context);
+  public android.os.IBinder onBind(android.content.Intent);
+  public void onCreate();
+  public int onStartCommand(android.content.Intent, int, int);
+  public void onDestroy();
+  public int getSocksPort();
+  public int getHttpTunnelPort();
+  public java.lang.String getInfo(java.lang.String);
+  public net.freehaven.tor.control.TorControlConnection getTorControlConnection();
+}
