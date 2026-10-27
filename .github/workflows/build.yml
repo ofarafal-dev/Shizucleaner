@@ -65,6 +65,6 @@ jobs:
         run: |
           cp app/build/outputs/apk/release/app-release.apk ShizuCleaner.apk
           gh release create "v${{ github.run_number }}" ShizuCleaner.apk \
-            --title "0.2.${{ github.run_number }}" \
+            --title "0.3.${{ github.run_number }}" \
             --notes "Build ${{ github.run_number }}, commit ${GITHUB_SHA::7}. ${{ steps.tests.outputs.summary }}" \
             --latest

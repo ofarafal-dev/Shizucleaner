@@ -17,6 +17,11 @@ enum class LeftoverKind(val label: String) {
 
 data class Leftover(val pkg: String, val kind: LeftoverKind, val path: String, val size: Long, val mtime: Long)
 
+data class ApkBackup(val pkg: String, val dir: String, val files: List<FileHit>) {
+    val size: Long get() = files.sumOf { it.size }
+    val mtime: Long get() = files.maxOfOrNull { it.mtime } ?: 0L
+}
+
 /** Skany plików i kasowanie przez serwis Shizuku. */
 class CleanerRepository(private val ctx: Context, private val shell: ShizukuClient) {
 
@@ -92,6 +97,40 @@ class CleanerRepository(private val ctx: Context, private val shell: ShizukuClie
         val raw = shell.scan("emptydirs")
         Wire.checkError(raw)
         return Wire.hits(raw)
+    }
+
+    // ---------- kopie APK (tylko pliki APK, bez danych aplikacji) ----------
+
+    /** Kopiuje base.apk i splity aplikacji do ShizuCleaner/backups/<pakiet>/. Rzuca wyjątek przy błędzie. */
+    @Suppress("DEPRECATION")
+    suspend fun backupApk(pkg: String): String {
+        val ai = ctx.packageManager.getApplicationInfo(pkg, 0)
+        val srcs = listOf(ai.sourceDir) + (ai.splitSourceDirs?.toList() ?: emptyList())
+        val raw = shell.backup(srcs, pkg)
+        Wire.checkError(raw)
+        return raw
+    }
+
+    suspend fun listBackups(): List<ApkBackup> {
+        val raw = shell.scan("backups")
+        Wire.checkError(raw)
+        return Wire.hits(raw)
+            .groupBy { it.path.substringBeforeLast('/') }
+            .map { (dir, files) -> ApkBackup(dir.substringAfterLast('/'), dir, files) }
+            .sortedByDescending { it.mtime }
+    }
+
+    /** Instalacja z kopii. Obsługuje tylko pojedynczy APK; kopie ze splitami trzeba zainstalować ręcznie. */
+    suspend fun restoreBackup(b: ApkBackup): ActionResult {
+        if (b.files.size != 1) {
+            return ActionResult(
+                b.pkg, b.pkg, false,
+                "Kopia ma ${b.files.size} plików (split APK). Zainstaluj ręcznie z folderu ShizuCleaner/backups/${b.pkg}.",
+            )
+        }
+        val r = shell.exec("pm", "install", "-r", b.files.single().path)
+        val ok = r.ok && r.output.contains("Success", ignoreCase = true)
+        return ActionResult(b.pkg, b.pkg, ok, if (ok) "OK" else r.output.trim().ifEmpty { "kod ${r.exitCode}" })
     }
 
     /** Kasuje porcjami po 25 ścieżek, żeby pokazać postęp i nie blokować Binder na wiele minut. */

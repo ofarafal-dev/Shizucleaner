@@ -39,6 +39,7 @@ class ShellService : IShellService.Stub() {
             "dups" -> fs.scanDuplicates(args.getOrNull(0)?.toLongOrNull() ?: (1L shl 20), args.getOrNull(1)?.toIntOrNull() ?: 200)
             "apks" -> fs.scanApks(500)
             "emptydirs" -> fs.scanEmptyDirs(500)
+            "backups" -> fs.scanBackups()
             else -> "E\tNieznany typ skanu: $kind"
         }
     } catch (e: Exception) {
@@ -47,6 +48,12 @@ class ShellService : IShellService.Stub() {
 
     override fun delete(paths: Array<String>, passes: Int): String = try {
         fs.delete(paths.toList(), passes)
+    } catch (e: Exception) {
+        "E\t${e.message}"
+    }
+
+    override fun backup(srcs: Array<String>, pkg: String): String = try {
+        fs.backupApks(srcs.toList(), pkg)
     } catch (e: Exception) {
         "E\t${e.message}"
     }

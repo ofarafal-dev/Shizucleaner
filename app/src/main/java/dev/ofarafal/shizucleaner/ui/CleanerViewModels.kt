@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.ofarafal.shizucleaner.ShizuApp
 import dev.ofarafal.shizucleaner.data.ActionResult
+import dev.ofarafal.shizucleaner.data.ApkBackup
 import dev.ofarafal.shizucleaner.data.CleanerRepository
 import dev.ofarafal.shizucleaner.data.DbUpdater
 import dev.ofarafal.shizucleaner.data.DupGroup
@@ -30,8 +31,12 @@ data class AppsUi(
     val query: String = "",
     val confirm: AppsAction? = null,
     val wipeLeftovers: Boolean = true,
+    val backupApk: Boolean = true,
     val progress: Pair<Int, Int>? = null,
     val results: List<ActionResult>? = null,
+    val backups: List<ApkBackup>? = null,
+    val backupsBusy: Boolean = false,
+    val backupsMessage: String? = null,
 ) {
     fun visible(): List<UserApp> {
         val q = query.trim()
@@ -67,12 +72,58 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
     fun clearSelection() = _ui.update { it.copy(selected = emptySet()) }
     fun askConfirm(action: AppsAction?) = _ui.update { it.copy(confirm = action) }
     fun setWipe(on: Boolean) = _ui.update { it.copy(wipeLeftovers = on) }
+    fun setBackupApk(on: Boolean) = _ui.update { it.copy(backupApk = on) }
+
+    // ---- kopie APK
+    fun openBackups() {
+        _ui.update { it.copy(backups = emptyList(), backupsBusy = true, backupsMessage = null) }
+        reloadBackups()
+    }
+
+    fun closeBackups() = _ui.update { it.copy(backups = null, backupsMessage = null) }
+
+    private fun reloadBackups() {
+        viewModelScope.launch {
+            try {
+                val list = sh.cleaner.listBackups()
+                _ui.update { it.copy(backups = list, backupsBusy = false) }
+            } catch (e: Exception) {
+                _ui.update { it.copy(backupsBusy = false, backupsMessage = e.message ?: "Błąd odczytu kopii") }
+            }
+        }
+    }
+
+    fun restoreBackup(b: ApkBackup) {
+        viewModelScope.launch {
+            _ui.update { it.copy(backupsBusy = true, backupsMessage = null) }
+            val r = try {
+                sh.cleaner.restoreBackup(b)
+            } catch (e: Exception) {
+                ActionResult(b.pkg, b.pkg, false, e.message ?: "Błąd")
+            }
+            _ui.update { it.copy(backupsBusy = false, backupsMessage = if (r.ok) "Zainstalowano ${b.pkg}." else r.message) }
+            load(true)
+        }
+    }
+
+    fun deleteBackup(b: ApkBackup) {
+        viewModelScope.launch {
+            _ui.update { it.copy(backupsBusy = true, backupsMessage = null) }
+            try {
+                sh.cleaner.delete(listOf(b.dir), 0)
+            } catch (e: Exception) {
+                _ui.update { it.copy(backupsMessage = e.message ?: "Błąd") }
+            }
+            reloadBackups()
+        }
+    }
     fun dismissResults() = _ui.update { it.copy(results = null) }
 
     fun run(shizukuReady: Boolean) {
         val action = _ui.value.confirm ?: return
         val targets = _ui.value.selectedApps()
         val wipe = _ui.value.wipeLeftovers
+        val backup = _ui.value.backupApk
         val p = passes
         viewModelScope.launch {
             _ui.update { it.copy(confirm = null, progress = 0 to maxOf(1, targets.size)) }
@@ -83,7 +134,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                 } else {
                     targets.forEachIndexed { i, app ->
                         results += when (action) {
-                            AppsAction.UNINSTALL -> sh.apps.uninstall(app, wipe, p)
+                            AppsAction.UNINSTALL -> sh.apps.uninstall(app, wipe, p, backup)
                             else -> sh.apps.clearData(app)
                         }
                         _ui.update { it.copy(progress = (i + 1) to targets.size) }

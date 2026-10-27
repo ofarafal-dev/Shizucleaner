@@ -19,12 +19,14 @@ class FsOpsTest {
     val tmp = TemporaryFolder()
 
     private lateinit var root: File
+    private lateinit var appRoot: File
     private lateinit var ops: FsOps
 
     @Before
     fun setUp() {
         root = tmp.newFolder("sdcard")
-        ops = FsOps(root.path, "dev.test.own")
+        appRoot = tmp.newFolder("data-app")
+        ops = FsOps(root.path, "dev.test.own", appRoot.path)
     }
 
     private fun file(rel: String, bytes: ByteArray = ByteArray(10) { 7 }): File {
@@ -200,5 +202,69 @@ class FsOpsTest {
         assertEquals(500L, dirs.single { it.root == "obb" }.size)
         val top = dirs.filter { it.root == "top" }
         assertEquals(listOf("Telegram"), top.map { it.name })
+    }
+
+    // ---------- kopie APK ----------
+
+    private fun fakeApk(name: String, bytes: Int = 100): File {
+        val f = File(appRoot, "~~abc/com.some.app-xyz/$name")
+        f.parentFile!!.mkdirs()
+        f.writeBytes(ByteArray(bytes) { 3 })
+        return f
+    }
+
+    @Test
+    fun backupCopiesBaseAndSplits() {
+        val base = fakeApk("base.apk", 100)
+        val split = fakeApk("split_config.pl.apk", 50)
+        val r = ops.backupApks(listOf(base.path, split.path), "com.some.app")
+        assertTrue(r, r.startsWith("OK\t"))
+        val dir = File(ops.root, "ShizuCleaner/backups/com.some.app")
+        assertEquals(setOf("base.apk", "split_config.pl.apk"), dir.list()!!.toSet())
+        assertTrue(r.endsWith("\t2\t150"))
+    }
+
+    @Test
+    fun backupRefusesSourcesOutsideAppRootAndBadNames() {
+        val outside = tmp.newFile("evil.apk")
+        assertTrue(ops.backupApks(listOf(outside.path), "com.some.app").startsWith("E\t"))
+        val notApk = File(appRoot, "x/readme.txt").apply { parentFile!!.mkdirs(); writeText("x") }
+        assertTrue(ops.backupApks(listOf(notApk.path), "com.some.app").startsWith("E\t"))
+        val ok = fakeApk("base.apk")
+        assertTrue(ops.backupApks(listOf(ok.path), "../../etc").startsWith("E\t"))
+        assertTrue(ops.backupApks(listOf(ok.path), "nodots").startsWith("E\t"))
+        assertTrue(ops.backupApks(emptyList(), "com.some.app").startsWith("E\t"))
+        assertFalse(File(ops.root, "ShizuCleaner/backups/com.some.app").exists())
+    }
+
+    @Test
+    fun backupsAreListedButExcludedFromOtherScans() {
+        val base = fakeApk("base.apk", 4000)
+        ops.backupApks(listOf(base.path), "com.some.app")
+        val listed = Wire.hits(ops.scanBackups())
+        assertEquals(1, listed.size)
+        assertTrue(listed[0].path.endsWith("com.some.app/base.apk"))
+        assertTrue(Wire.hits(ops.scanApks(10)).isEmpty())
+        assertTrue(Wire.hits(ops.scanLarge(1000, 10)).isEmpty())
+    }
+
+    @Test
+    fun backupOverwritesPreviousBackup() {
+        val v1 = fakeApk("base.apk", 100)
+        ops.backupApks(listOf(v1.path), "com.some.app")
+        val dir = File(ops.root, "ShizuCleaner/backups/com.some.app")
+        File(dir, "stale_split.apk").writeText("old")
+        ops.backupApks(listOf(v1.path), "com.some.app")
+        assertEquals(setOf("base.apk"), dir.list()!!.toSet())
+    }
+
+    @Test
+    fun backupFolderCanBeDeletedThroughDelete() {
+        val base = fakeApk("base.apk")
+        ops.backupApks(listOf(base.path), "com.some.app")
+        val dir = File(ops.root, "ShizuCleaner/backups/com.some.app")
+        val res = Wire.deleteResults(ops.delete(listOf(dir.path), 0))
+        assertTrue(res[0].ok)
+        assertFalse(dir.exists())
     }
 }

@@ -25,7 +25,8 @@ class AppsRepository(
     private val cleaner: CleanerRepository,
 ) {
 
-    suspend fun load(readSizes: Boolean): List<UserApp> {
+    /** [includeSystem]: dołącza aplikacje systemowe (bez krytycznych i chronionych) — dla zapory. */
+    suspend fun load(readSizes: Boolean, includeSystem: Boolean = false): List<UserApp> {
         val apps = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
             val protectedPkgs = protectedPackages(ctx)
@@ -35,7 +36,10 @@ class AppsRepository(
                 @Suppress("DEPRECATION")
                 pm.getInstalledApplications(0)
             }
-            infos.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 && it.packageName !in protectedPkgs }
+            infos.filter {
+                ((it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || includeSystem) &&
+                    it.packageName !in protectedPkgs && !CriticalPackages.isCritical(it.packageName)
+            }
                 .map { it.packageName to runCatching { pm.getApplicationLabel(it).toString() }.getOrDefault(it.packageName) }
         }
         val sizes = if (readSizes) {
@@ -62,7 +66,14 @@ class AppsRepository(
     }
 
     /** Odinstalowuje (razem z danymi) i opcjonalnie nadpisuje oraz kasuje resztki w pamięci współdzielonej. */
-    suspend fun uninstall(app: UserApp, wipeLeftovers: Boolean, passes: Int): ActionResult {
+    suspend fun uninstall(app: UserApp, wipeLeftovers: Boolean, passes: Int, backupApk: Boolean): ActionResult {
+        if (backupApk) {
+            try {
+                cleaner.backupApk(app.pkg)
+            } catch (e: Exception) {
+                return ActionResult(app.pkg, app.label, false, "Kopia APK nieudana, aplikacji nie usunięto: ${e.message}")
+            }
+        }
         val r = shell.exec("pm", "uninstall", "--user", "0", app.pkg)
         if (!(r.ok && r.output.contains("Success", ignoreCase = true))) {
             return ActionResult(app.pkg, app.label, false, r.output.trim().ifEmpty { "kod ${r.exitCode}" })

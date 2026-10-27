@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,9 +41,10 @@ fun AppsScreen(shizuku: ShizukuState, vm: AppsViewModel = viewModel()) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { vm.askConfirm(AppsAction.TRIM_CACHES) }, enabled = ready && !busy) {
-                Text("Wyczyść cache wszystkich")
+                Text("Wyczyść cache")
             }
             TextButton(onClick = { vm.load(ready) }, enabled = !ui.loading && !busy) { Text("Odśwież") }
+            TextButton(onClick = vm::openBackups, enabled = ready && !busy) { Text("Kopie APK") }
         }
 
         OutlinedTextField(
@@ -104,6 +106,14 @@ fun AppsScreen(shizuku: ShizukuState, vm: AppsViewModel = viewModel()) {
                             if (ui.selected.size > 5) " i inne." else ".",
                     )
                     Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = ui.backupApk, onCheckedChange = vm::setBackupApk)
+                        Text(
+                            "Najpierw zapisz kopię APK (bez danych) w ShizuCleaner/backups — pozwala zainstalować aplikację z powrotem. " +
+                                "Jeśli kopia się nie uda, aplikacja nie zostanie usunięta.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = ui.wipeLeftovers, onCheckedChange = vm::setWipe)
                         Text(
                             "Usuń też resztki w pamięci (Android/data, obb, media, znane foldery) — ${passesText(vm.passes)}",
@@ -142,6 +152,43 @@ fun AppsScreen(shizuku: ShizukuState, vm: AppsViewModel = viewModel()) {
         )
 
         null -> Unit
+    }
+
+    ui.backups?.let { list ->
+        AlertDialog(
+            onDismissRequest = vm::closeBackups,
+            title = { Text("Kopie APK") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "Pliki instalacyjne zapisane przed odinstalowaniem (bez danych aplikacji). " +
+                            "Folder: ShizuCleaner/backups. Kopie ze splitami trzeba zainstalować ręcznie.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (ui.backupsBusy) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+                    }
+                    ui.backupsMessage?.let { Text(it, Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium) }
+                    if (list.isEmpty() && !ui.backupsBusy) {
+                        Text("Brak kopii.", Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    list.forEach { b ->
+                        Column(Modifier.padding(top = 12.dp)) {
+                            Text(b.pkg, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "${formatSize(b.size)} · ${b.files.size} plik(i) · ${formatDate(b.mtime)}",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Row {
+                                TextButton(onClick = { vm.restoreBackup(b) }, enabled = ready && !ui.backupsBusy) { Text("Zainstaluj") }
+                                TextButton(onClick = { vm.deleteBackup(b) }, enabled = ready && !ui.backupsBusy) { Text("Usuń kopię") }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = vm::closeBackups) { Text("Zamknij") } },
+        )
     }
 
     ui.results?.let { results ->

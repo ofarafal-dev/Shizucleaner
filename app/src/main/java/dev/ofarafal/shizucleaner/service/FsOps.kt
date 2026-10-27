@@ -15,9 +15,12 @@ import kotlin.random.Random
 class FsOps(
     rootPath: String = DEFAULT_ROOT,
     private val ownPackage: String = OWN_PACKAGE,
+    private val appRootPath: String = "/data/app",
 ) {
     val root: File = File(rootPath).canonicalFile
     private val rootPrefix = root.path + File.separator
+    private val backupsDir = File(root, "ShizuCleaner/backups")
+    private val pkgRegex = Regex("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+$")
 
     companion object {
         const val DEFAULT_ROOT = "/storage/emulated/0"
@@ -58,6 +61,7 @@ class FsOps(
             if (isLink(c) || badName(c)) continue
             if (c.isDirectory) {
                 if (dir == root && c.name == "Android") continue
+                if (c == backupsDir) continue // kopie APK nie trafiają do skanów (żeby nie skasować ich przypadkiem)
                 walk(c, onFile)
             } else if (c.isFile) {
                 onFile(c)
@@ -176,6 +180,53 @@ class FsOps(
             sb.append("H\t${if (f.isFile) f.length() else 0}\t${f.lastModified()}\t${f.path}\n")
         }
         return sb.toString()
+    }
+
+    // ---------- kopie APK ----------
+
+    /**
+     * Kopiuje pliki APK aplikacji (base + splity) z [appRootPath] do ShizuCleaner/backups/[pkg]/.
+     * Źródło musi leżeć pod /data/app i kończyć się na .apk; nazwa pakietu przechodzi przez regex.
+     * Poprzednia kopia tego pakietu jest nadpisywana. Zwraca "OK\tfolder\tliczba\tbajty" albo "E\tpowód".
+     */
+    fun backupApks(srcs: List<String>, pkg: String): String {
+        if (!pkgRegex.matches(pkg)) return "E\tNieprawidłowa nazwa pakietu"
+        if (srcs.isEmpty() || srcs.size > 60) return "E\tNieprawidłowa liczba plików"
+        val prefix = File(appRootPath).canonicalPath + File.separator
+        val files = ArrayList<File>()
+        for (s in srcs) {
+            val f = try {
+                File(s).canonicalFile
+            } catch (e: Exception) {
+                return "E\tBłędna ścieżka źródłowa"
+            }
+            if (!f.path.startsWith(prefix) || !f.name.endsWith(".apk", ignoreCase = true) || !f.isFile) {
+                return "E\tNiedozwolone źródło: ${f.name}"
+            }
+            files += f
+        }
+        val dest = File(backupsDir, pkg)
+        dest.deleteRecursively()
+        if (!dest.mkdirs()) return "E\tNie można utworzyć folderu kopii"
+        var bytes = 0L
+        for (f in files) {
+            f.copyTo(File(dest, f.name), overwrite = true)
+            bytes += f.length()
+        }
+        return "OK\t${dest.path}\t${files.size}\t$bytes"
+    }
+
+    /** Pliki APK w folderze kopii (jeden poziom podfolderów = pakiet). */
+    fun scanBackups(): String {
+        val out = ArrayList<File>()
+        backupsDir.listFiles()?.forEach { d ->
+            if (d.isDirectory && !isLink(d)) {
+                d.listFiles()?.forEach { f ->
+                    if (f.isFile && !badName(f) && f.name.endsWith(".apk", ignoreCase = true)) out += f
+                }
+            }
+        }
+        return encodeHits(out)
     }
 
     // ---------- kasowanie ----------

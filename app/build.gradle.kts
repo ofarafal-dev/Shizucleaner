@@ -17,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = appVersionCode
-        versionName = "0.2.$appVersionCode"
+        versionName = "0.3.$appVersionCode"
     }
 
     // Stały klucz z sekretów CI. Bez niego (build lokalny) release podpisuje się kluczem debug,

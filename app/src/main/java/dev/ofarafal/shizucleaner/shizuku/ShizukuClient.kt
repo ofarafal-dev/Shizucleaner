@@ -118,6 +118,12 @@ class ShizukuClient(context: Context) {
         s.delete(paths.toTypedArray(), passes)
     }
 
+    /** Kopia APK (źródła z /data/app) do pamięci współdzielonej. Zwraca surowe "OK\t..." albo "E\t...". */
+    suspend fun backup(srcs: List<String>, pkg: String): String = withContext(Dispatchers.IO) {
+        val s = service ?: throw IllegalStateException("Usługa Shizuku nie jest połączona")
+        s.backup(srcs.toTypedArray(), pkg)
+    }
+
     private companion object {
         const val REQUEST_CODE = 1001
     }

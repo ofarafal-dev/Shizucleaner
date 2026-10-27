@@ -12,4 +12,7 @@ interface IShellService {
 
     // Kasowanie ścieżek z opcjonalnym nadpisaniem (passes 0..3). Zwraca linie OK/ERR.
     String delete(in String[] paths, int passes) = 3;
+
+    // Kopia plików APK aplikacji (z /data/app) do ShizuCleaner/backups/<pakiet>/. Zwraca OK/E.
+    String backup(in String[] srcs, String pkg) = 4;
 }

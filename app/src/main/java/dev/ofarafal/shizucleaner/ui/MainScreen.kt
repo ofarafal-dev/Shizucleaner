@@ -36,8 +36,8 @@ import dev.ofarafal.shizucleaner.update.CheckResult
 private enum class Tab(val label: String, val glyph: String) {
     DEBLOAT("Debloat", "🗑"),
     APPS("Aplikacje", "📦"),
-    LEFTOVERS("Resztki", "🧹"),
-    FILES("Pliki", "📁"),
+    CLEAN("Czyszczenie", "🧹"),
+    PRIVACY("Prywatność", "🛡"),
     SETTINGS("Ustawienia", "⚙"),
 }
 
@@ -88,8 +88,8 @@ fun MainScreen(vm: MainViewModel) {
             when (tab) {
                 Tab.DEBLOAT -> DebloatScreen(vm, shizuku)
                 Tab.APPS -> AppsScreen(shizuku)
-                Tab.LEFTOVERS -> LeftoversScreen(shizuku)
-                Tab.FILES -> FilesScreen(shizuku)
+                Tab.CLEAN -> CleanScreen(shizuku)
+                Tab.PRIVACY -> PrivacyScreen(shizuku)
                 Tab.SETTINGS -> SettingsScreen(onOpenUpdates = { vm.openUpdate(true) })
             }
         }
