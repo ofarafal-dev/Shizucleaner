@@ -43,6 +43,22 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew --no-daemon testDebugUnitTest assembleRelease -PappVersionCode=${{ github.run_number }}
 
+      - name: Test summary
+        id: tests
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import glob, sys
+          import xml.etree.ElementTree as ET
+          t = f = e = s = 0
+          for p in glob.glob('app/build/test-results/testDebugUnitTest/*.xml'):
+              r = ET.parse(p).getroot()
+              t += int(r.get('tests', 0)); f += int(r.get('failures', 0))
+              e += int(r.get('errors', 0)); s += int(r.get('skipped', 0))
+          if t == 0:
+              sys.exit("Nie znaleziono wyników testów — testy się nie uruchomiły")
+          print(f"summary=Testy jednostkowe: {t}, błędy: {f + e}, pominięte: {s}.")
+          PY
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,5 +66,5 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk ShizuCleaner.apk
           gh release create "v${{ github.run_number }}" ShizuCleaner.apk \
             --title "0.2.${{ github.run_number }}" \
-            --notes "Build ${{ github.run_number }}, commit ${GITHUB_SHA::7}" \
+            --notes "Build ${{ github.run_number }}, commit ${GITHUB_SHA::7}. ${{ steps.tests.outputs.summary }}" \
             --latest
