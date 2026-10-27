@@ -13,16 +13,18 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - name: Inspect
         run: |
-          set -x
-          mkdir w && cd w
-          for v in 0.4.9.14 0.4.8.17 0.4.7.14; do curl -fsSL -o tor.aar "https://repo1.maven.org/maven2/info/guardianproject/tor-android/$v/tor-android-$v.aar" && echo $v > ../version.txt && break; done
-          curl -fsSL https://repo1.maven.org/maven2/info/guardianproject/tor-android/maven-metadata.xml -o ../meta.xml || true
-          curl -fsSL https://repo1.maven.org/maven2/info/guardianproject/jtorctl/maven-metadata.xml -o ../jtorctl-meta.xml || true
-          unzip -q tor.aar -d aar
-          { echo "version: $(cat ../version.txt)"; echo; echo "== files"; (cd aar && find . -type f | sort | xargs ls -l); echo; echo "== manifest"; cat aar/AndroidManifest.xml; echo; echo "== javap"; mkdir cls && (cd cls && unzip -q ../aar/classes.jar); find cls -name '*.class' | sed 's|cls/||;s|\.class$||;s|/|.|g' | grep -v '\$[0-9]' | xargs javap -public -constants -cp cls; } > ../tor-api.txt 2>&1
-          cd ..
+          mkdir -p out
+          for v in 0.4.7.14 0.4.8.17 0.4.8.22 0.4.9.5 0.4.9.8; do
+            d=w$v; mkdir -p $d && cd $d
+            curl -fsSL -o tor.aar "https://repo1.maven.org/maven2/info/guardianproject/tor-android/$v/tor-android-$v.aar" || { echo "no aar $v" > ../out/$v.txt; cd ..; continue; }
+            curl -fsSL -o tor.pom "https://repo1.maven.org/maven2/info/guardianproject/tor-android/$v/tor-android-$v.pom" || true
+            unzip -q tor.aar -d aar
+            { echo "== $v"; cat aar/META-INF/com/android/build/gradle/aar-metadata.properties; echo; grep -E "artifactId|<version>|scope" tor.pom; echo; mkdir cls && (cd cls && unzip -q ../aar/classes.jar); find cls -name '*.class' | sed 's|cls/||;s|\.class$||;s|/|.|g' | grep -v '\$[0-9]' | grep TorService | xargs javap -public -constants -cp cls | grep -E "ACTION|EXTRA|STATUS|getSocksPort|LocalBinder|getService"; } > ../out/$v.txt 2>&1
+            cd ..
+          done
+          cat out/*.txt > tor-compat.txt
           git config user.name github-actions; git config user.email actions@github.com
-          git checkout -q -b inspect-out
-          git add -f tor-api.txt meta.xml jtorctl-meta.xml
-          git commit -q -m "tor api"
-          git push -q origin inspect-out
+          git checkout -q -b inspect-out2
+          git add -f tor-compat.txt
+          git commit -q -m "compat"
+          git push -q origin inspect-out2
