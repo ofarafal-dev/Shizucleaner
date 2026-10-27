@@ -86,7 +86,7 @@ private val LabelShadow = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.8
  * menu Start i zasobnik. Okna otwierają się zmaksymalizowane (to telefon); przycisk w pasku tytułu je przywraca.
  */
 @Composable
-fun XpShell(amnesia: Boolean, profile: BrowserProfile, vault: SessionVault, onExit: () -> Unit) {
+fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault: SessionVault, onExit: () -> Unit) {
     val ctx = LocalContext.current
     var wm by remember { mutableStateOf(WindowsState()) }
     var startOpen by remember { mutableStateOf(false) }
@@ -141,7 +141,7 @@ fun XpShell(amnesia: Boolean, profile: BrowserProfile, vault: SessionVault, onEx
                             win = win,
                             app = app,
                             active = active,
-                            env = AppEnv(amnesia, profile, vault, active && !win.minimized, open),
+                            env = AppEnv(amnesia, profile, vault, active && !win.minimized, open, vaultName),
                             onFocus = { if (wm.activeId != win.id) wm = WindowLogic.focus(wm, win.id) },
                             onMinimize = { wm = WindowLogic.minimize(wm, win.id) },
                             onMaximize = { wm = WindowLogic.toggleMaximize(wm, win.id) },
@@ -155,6 +155,7 @@ fun XpShell(amnesia: Boolean, profile: BrowserProfile, vault: SessionVault, onEx
             if (startOpen) {
                 StartMenu(
                     amnesia = amnesia,
+                    vaultName = vaultName,
                     onLaunch = open,
                     onTurnOff = turnOff,
                     onDismiss = { startOpen = false },
@@ -164,7 +165,7 @@ fun XpShell(amnesia: Boolean, profile: BrowserProfile, vault: SessionVault, onEx
 
         Taskbar(
             wm = wm,
-            amnesia = amnesia,
+            amnesia = amnesia || vaultName != null,
             onStart = { startOpen = !startOpen },
             onWindow = { id -> startOpen = false; wm = WindowLogic.taskbarClick(wm, id) },
         )
@@ -451,7 +452,7 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
 /* ---------- menu Start ---------- */
 
 @Composable
-private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: () -> Unit, onDismiss: () -> Unit) {
+private fun StartMenu(amnesia: Boolean, vaultName: String?, onLaunch: (String) -> Unit, onTurnOff: () -> Unit, onDismiss: () -> Unit) {
     var allPrograms by remember { mutableStateOf(false) }
     val noRipple = remember { MutableInteractionSource() }
     val menuShape = RoundedCornerShape(20.dp)
@@ -490,7 +491,7 @@ private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: (
                     contentAlignment = Alignment.Center,
                 ) { GlyphIcon(Glyph.Logo, Modifier.size(28.dp)) }
                 Text(
-                    if (amnesia) "Świat tymczasowy" else "Świat zwykły",
+                    if (amnesia) "Świat tymczasowy" else if (vaultName != null) "Sejf: $vaultName" else "Świat zwykły",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,

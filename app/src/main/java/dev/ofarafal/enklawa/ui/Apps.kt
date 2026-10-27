@@ -13,6 +13,8 @@ class AppEnv(
     val vault: SessionVault,
     val active: Boolean,
     val open: (String) -> Unit,
+    /** Nazwa sejfu, gdy świat działa w trybie z pamięcią; w amnezji i zwykłym null. */
+    val vaultName: String? = null,
 )
 
 /** Definicja aplikacji systemu: ikona, nazwa i zawartość okna. Aplikacje to moduły tego APK, nie zewnętrzne programy. */

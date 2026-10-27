@@ -56,6 +56,7 @@ fun SettingsApp(env: AppEnv) {
         Section("Prywatność") {
             Text(
                 if (env.amnesia) "Tryb amnezji: po wyjściu klucz sesji znika, a pliki świata i profil przeglądarki są kasowane."
+                else if (env.vaultName != null) "Sejf „${env.vaultName}”: pliki i notatki są szyfrowane kluczem z hasła i zostają na telefonie. Przeglądarka działa na profilu tymczasowym i po wyjściu jest czyszczona; jej dane nie trafiają do sejfu."
                 else "Tryb zwykły: przeglądarka zachowuje dane (ciasteczka, logowania) bez szyfrowania. Pliki świata znikają po wyjściu.",
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -65,7 +66,7 @@ fun SettingsApp(env: AppEnv) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (!env.amnesia) {
+            if (!env.amnesia && env.vaultName == null) {
                 OutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {

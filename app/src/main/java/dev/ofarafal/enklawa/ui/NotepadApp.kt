@@ -46,7 +46,7 @@ fun NotepadApp(env: AppEnv) {
                     status = "Podaj nazwę pliku"
                 } else {
                     env.vault.write(n, text.toByteArray(Charsets.UTF_8))
-                    status = "Zapisano \"$n\" w zaszyfrowanym magazynie sesji"
+                    status = "Zapisano \"$n\" w zaszyfrowanym magazynie"
                 }
             }) { Text("Zapisz") }
             Box {
@@ -82,7 +82,7 @@ fun NotepadApp(env: AppEnv) {
             modifier = Modifier.weight(1f).fillMaxWidth(),
         )
         Text(
-            status ?: "Pliki zostają tylko w tej sesji i znikają po wyjściu ze świata.",
+            status ?: (if (env.vaultName != null) "Pliki zostają w sejfie „${env.vaultName}” (zaszyfrowane)." else "Pliki zostają tylko w tej sesji i znikają po wyjściu ze świata."),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth().background(Xp.Body),

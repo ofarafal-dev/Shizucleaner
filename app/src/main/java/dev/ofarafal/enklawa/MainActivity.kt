@@ -30,7 +30,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import dev.ofarafal.enklawa.browser.BrowserProfile
+import dev.ofarafal.enklawa.crypto.SessionKey
 import dev.ofarafal.enklawa.session.WorldSession
+import dev.ofarafal.enklawa.vault.VaultInfo
 import dev.ofarafal.enklawa.ui.EnklawaTheme
 import dev.ofarafal.enklawa.ui.EntryScreen
 import dev.ofarafal.enklawa.ui.Glyph
@@ -43,6 +45,7 @@ class MainActivity : ComponentActivity() {
     private var profile by mutableStateOf<BrowserProfile?>(null)
     private var ending by mutableStateOf(false)
     private var amnesia by mutableStateOf(false)
+    private var vaultName by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,8 +67,12 @@ class MainActivity : ComponentActivity() {
                     val p = profile
                     when {
                         ending -> ShutdownScreen()
-                        s == null || p == null -> EntryScreen(onEnter = ::enterWorld)
-                        else -> XpShell(amnesia = amnesia, profile = p, vault = s.vault, onExit = ::exitWorld)
+                        s == null || p == null -> EntryScreen(
+                            vaults = (application as EnklawaApp).vaults,
+                            onEnter = ::enterWorld,
+                            onVaultUnlocked = ::enterVault,
+                        )
+                        else -> XpShell(amnesia = amnesia, vaultName = vaultName, profile = p, vault = s.vault, onExit = ::exitWorld)
                     }
                 }
             }
@@ -74,10 +81,24 @@ class MainActivity : ComponentActivity() {
 
     private fun enterWorld(amnesiaMode: Boolean) {
         amnesia = amnesiaMode
+        vaultName = null
         // Profile po przerwanym procesie (crash) — usuwamy, zanim zaczniemy nową sesję.
         runCatching { BrowserProfile.sweepLeftovers() }
         val s = WorldSession.start((application as EnklawaApp).sessionParent)
         val p = BrowserProfile.create(persistent = !amnesiaMode)
+        s.onEnd { p.destroy() }
+        session = s
+        profile = p
+    }
+
+    /** Tryb z pamięcią: klucz już odblokowany hasłem; przeglądarka na profilu tymczasowym. */
+    private fun enterVault(info: VaultInfo, key: SessionKey) {
+        amnesia = false
+        vaultName = info.name
+        runCatching { BrowserProfile.sweepLeftovers() }
+        val dataDir = (application as EnklawaApp).vaults.dataDir(info.id)
+        val s = WorldSession.openVault(dataDir, key)
+        val p = BrowserProfile.create(persistent = false)
         s.onEnd { p.destroy() }
         session = s
         profile = p
@@ -112,7 +133,7 @@ private fun ShutdownScreen() {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF00309C), Color(0xFF3A6BD6), Color(0xFF00309C)))),
+            .background(Brush.verticalGradient(listOf(Color(0xFF0B1220), Color(0xFF132038), Color(0xFF0B1220)))),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

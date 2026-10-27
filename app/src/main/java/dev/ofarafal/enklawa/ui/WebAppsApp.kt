@@ -38,7 +38,7 @@ fun WebAppsApp(env: AppEnv) {
     ) {
         Text(
             "Otwórz stronę jako osobną aplikację. Dane logowania zostają w profilu tego świata" +
-                (if (env.amnesia) " i znikną po wyjściu." else " (tryb zwykły: zachowane, bez szyfrowania)."),
+                (if (env.amnesia || env.vaultName != null) " i znikną po wyjściu." else " (tryb zwykły: zachowane, bez szyfrowania)."),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

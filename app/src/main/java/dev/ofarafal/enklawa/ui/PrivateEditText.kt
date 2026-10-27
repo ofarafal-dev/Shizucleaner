@@ -24,20 +24,23 @@ fun PrivateEditText(
     modifier: Modifier = Modifier,
     singleLine: Boolean = false,
     hint: String = "",
+    password: Boolean = false,
 ) {
     val changed = rememberUpdatedState(onTextChange)
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             EditText(ctx).apply {
-                inputType = if (singleLine) {
+                inputType = if (password) {
+                    InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                } else if (singleLine) {
                     InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 } else {
                     InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
                 }
                 imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
                     (if (singleLine) EditorInfo.IME_ACTION_DONE else 0)
-                if (singleLine) setSingleLine(true) else setHorizontallyScrolling(false)
+                if (singleLine || password) setSingleLine(true) else setHorizontallyScrolling(false)
                 gravity = if (singleLine) Gravity.CENTER_VERTICAL else (Gravity.TOP or Gravity.START)
                 this.hint = hint
                 setTextColor(AColor.BLACK)
