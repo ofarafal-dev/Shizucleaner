@@ -71,7 +71,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
-    implementation("info.guardianproject:tor-android:0.4.9.5")
+    implementation("info.guardianproject:tor-android:0.4.8.17")
     implementation("info.guardianproject:jtorctl:0.4.5.7")
 
     testImplementation("junit:junit:4.13.2")
