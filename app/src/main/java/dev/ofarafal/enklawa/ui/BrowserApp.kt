@@ -67,6 +67,9 @@ fun BrowserApp(env: AppEnv, startUrl: String? = null) {
                 onGo = { go.value() },
                 onReady = { field = it },
             )
+            if (dev.ofarafal.enklawa.tor.TorManager.routingApplied) {
+                GlyphIcon(Glyph.Onion, Modifier.size(22.dp), tint = Color(0xFFC9B6FF))
+            }
             ToolButton(Glyph.Reload) { webView?.reload() }
         }
         if (progress in 1..99) {

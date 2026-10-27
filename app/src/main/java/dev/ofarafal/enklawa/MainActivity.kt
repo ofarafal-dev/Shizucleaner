@@ -3,6 +3,7 @@ package dev.ofarafal.enklawa
 import android.os.Build
 import android.os.Bundle
 import android.os.Process
+import android.os.SystemClock
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,6 +32,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import dev.ofarafal.enklawa.browser.BrowserProfile
 import dev.ofarafal.enklawa.crypto.SessionKey
+import dev.ofarafal.enklawa.session.AutoLock
 import dev.ofarafal.enklawa.session.WorldSession
 import dev.ofarafal.enklawa.vault.VaultInfo
 import dev.ofarafal.enklawa.ui.EnklawaTheme
@@ -46,6 +48,7 @@ class MainActivity : ComponentActivity() {
     private var ending by mutableStateOf(false)
     private var amnesia by mutableStateOf(false)
     private var vaultName by mutableStateOf<String?>(null)
+    private var stoppedAt: Long? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,6 +123,28 @@ class MainActivity : ComponentActivity() {
             finishAndRemoveTask()
             Process.killProcess(Process.myPid())
         }, 500)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (vaultName != null && session != null) stoppedAt = SystemClock.elapsedRealtime()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val was = stoppedAt
+        stoppedAt = null
+        if (vaultName != null && AutoLock.shouldLock(was, SystemClock.elapsedRealtime())) lockVault()
+    }
+
+    /** Blokada sejfu po dłuższym czasie w tle: klucz znika z RAM, wracamy na ekran wejścia (proces żyje dalej). */
+    private fun lockVault() {
+        val s = session ?: return
+        session = null
+        profile = null
+        vaultName = null
+        runCatching { dev.ofarafal.enklawa.tor.TorManager.shutdown(applicationContext) }
+        window.decorView.post { s.end() }
     }
 
     override fun onDestroy() {
