@@ -143,8 +143,11 @@ fun GlyphIcon(glyph: Glyph, modifier: Modifier = Modifier, tint: Color = Color.W
 
             Glyph.Logo -> {
                 val c = Offset(s / 2, s / 2)
-                drawCircle(tint, s * 0.36f, c, style = Stroke(width = s * 0.12f, cap = StrokeCap.Round))
-                drawCircle(tint.copy(alpha = 0.95f), s * 0.15f, c)
+                drawCircle(tint, s * 0.36f, c, style = Stroke(width = s * 0.09f, cap = StrokeCap.Round))
+                drawCircle(tint.copy(alpha = 0.95f), s * 0.2f, c)
+                drawCircle(tint.copy(alpha = 0.35f), s * 0.2f, c, style = Stroke(width = s * 0.03f))
+                val a = Math.toRadians(-38.0)
+                drawCircle(tint, s * 0.06f, Offset(c.x + (s * 0.36f * Math.cos(a)).toFloat(), c.y + (s * 0.36f * Math.sin(a)).toFloat()))
             }
 
             Glyph.Computer -> {
