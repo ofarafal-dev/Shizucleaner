@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ExplorerApp(env: AppEnv) {
     var tick by remember { mutableIntStateOf(0) }
-    val names = remember(tick) { env.vault.names() }
+    val names = remember(tick) { env.vault.names().filterNot { dev.ofarafal.enklawa.os.AppCatalog.isInternalName(it) } }
 
     Column(Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

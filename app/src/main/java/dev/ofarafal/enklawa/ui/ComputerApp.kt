@@ -31,7 +31,7 @@ fun ComputerApp(env: AppEnv) {
         Group("Ten świat") {
             Row2("Tryb", if (env.amnesia) "amnezja" else if (env.vaultName != null) "z pamięcią: ${env.vaultName}" else "zwykły")
             Row2("Klucz", if (env.vaultName != null) "z hasła (Argon2id) + Keystore, w RAM tylko po odblokowaniu" else "tylko w RAM, niszczony przy wyjściu")
-            Row2("Pliki w sesji", env.vault.names().size.toString())
+            Row2("Pliki w sesji", env.vault.names().count { !dev.ofarafal.enklawa.os.AppCatalog.isInternalName(it) }.toString())
             Row2("Profil przeglądarki", if (env.profile.isolated) "izolowany (WebView Profile)" else "domyślny WebView (brak izolacji)")
         }
         Group("System gospodarza") {

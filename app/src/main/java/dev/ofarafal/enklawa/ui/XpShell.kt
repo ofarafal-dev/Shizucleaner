@@ -104,6 +104,11 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
     var pendingOpen by remember { mutableStateOf<String?>(null) }
     val haptic = LocalHapticFeedback.current
 
+    androidx.compose.runtime.DisposableEffect(vault) {
+        AppStore.load(vault)
+        onDispose { AppStore.clear() }
+    }
+
     BackHandler(enabled = startOpen) { startOpen = false }
     BackHandler(enabled = !startOpen && wm.activeId != null) {
         wm.activeId?.let { wm = WindowLogic.close(wm, it) }
@@ -157,8 +162,15 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
                 Modifier.padding(start = 10.dp, top = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                desktopIds.mapNotNull { appById(it) }.forEach { app ->
-                    DesktopIcon(app, onClick = { open(app.id) }, onRemove = { desktopIds = desktopIds - app.id })
+                val installedIds = AppStore.apps.map { it.id }
+                (desktopIds + installedIds).mapNotNull { appById(it) }.forEach { app ->
+                    val inst = AppStore.apps.firstOrNull { it.id == app.id }
+                    DesktopIcon(
+                        app,
+                        onClick = { open(app.id) },
+                        onRemove = { desktopIds = desktopIds - app.id },
+                        onUninstall = inst?.let { i -> { AppStore.uninstall(vault, i.url) } },
+                    )
                 }
             }
 
@@ -224,7 +236,10 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
 /* ---------- ikony ---------- */
 
 @Composable
-private fun IconBox(app: AppDef, size: Dp, dim: Boolean = false) {
+private fun IconBox(app: AppDef, size: Dp, dim: Boolean = false) = TileIcon(app, size, dim)
+
+@Composable
+fun TileIcon(app: AppDef, size: Dp, dim: Boolean = false) {
     val shape = RoundedCornerShape(size * 0.26f)
     Box(
         Modifier
@@ -234,12 +249,26 @@ private fun IconBox(app: AppDef, size: Dp, dim: Boolean = false) {
             .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.05f))), shape),
         contentAlignment = Alignment.Center,
     ) {
-        GlyphIcon(app.glyph, Modifier.size(size * 0.62f), tint = Color.White.copy(alpha = if (dim) 0.55f else 1f))
+        val bmp = app.iconBitmap
+        when {
+            bmp != null -> androidx.compose.foundation.Image(
+                bitmap = bmp,
+                contentDescription = null,
+                modifier = Modifier.size(size * 0.66f).clip(RoundedCornerShape(size * 0.1f)),
+            )
+            app.letter != null -> Text(
+                app.letter,
+                color = Color.White.copy(alpha = if (dim) 0.55f else 1f),
+                fontSize = (size.value * 0.46f).sp,
+                fontWeight = FontWeight.Bold,
+            )
+            else -> GlyphIcon(app.glyph, Modifier.size(size * 0.62f), tint = Color.White.copy(alpha = if (dim) 0.55f else 1f))
+        }
     }
 }
 
 @Composable
-private fun DesktopIcon(app: AppDef, onClick: () -> Unit, onRemove: () -> Unit) {
+private fun DesktopIcon(app: AppDef, onClick: () -> Unit, onRemove: () -> Unit, onUninstall: (() -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     Box {
@@ -267,7 +296,11 @@ private fun DesktopIcon(app: AppDef, onClick: () -> Unit, onRemove: () -> Unit) 
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text("Otwórz") }, onClick = { menu = false; onClick() })
-            DropdownMenuItem(text = { Text("Usuń z pulpitu") }, onClick = { menu = false; onRemove() })
+            if (onUninstall != null) {
+                DropdownMenuItem(text = { Text("Odinstaluj") }, onClick = { menu = false; onUninstall() })
+            } else {
+                DropdownMenuItem(text = { Text("Usuń z pulpitu") }, onClick = { menu = false; onRemove() })
+            }
         }
     }
 }
@@ -524,7 +557,7 @@ private fun Taskbar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (dev.ofarafal.enklawa.tor.TorManager.routingApplied) GlyphIcon(Glyph.Onion, Modifier.size(16.dp), tint = Color(0xFFC9B6FF))
+                GlyphIcon(Glyph.Onion, Modifier.size(16.dp), tint = torIndicatorColor())
                 GlyphIcon(Glyph.Lock, Modifier.size(16.dp), tint = if (amnesia) Color(0xFF9FFFE0) else Color.White.copy(alpha = 0.6f))
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
                     Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
@@ -593,6 +626,9 @@ private fun StartMenu(amnesia: Boolean, vaultName: String?, onAddToDesktop: (Str
                             MenuLine("◂ Wstecz", null, bold = true, color = Xp.Link) { allPrograms = false }
                             AppRegistry.forEach { app ->
                                 MenuLine(app.title, app, enabled = app.available, onAddToDesktop = { onAddToDesktop(app.id) }) { onLaunch(app.id) }
+                            }
+                            AppStore.apps.mapNotNull { appById(it.id) }.forEach { app ->
+                                MenuLine(app.title, app) { onLaunch(app.id) }
                             }
                         } else {
                             PinnedIds.mapNotNull { appById(it) }.forEach { app ->

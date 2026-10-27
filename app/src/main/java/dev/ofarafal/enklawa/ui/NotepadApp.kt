@@ -52,7 +52,7 @@ fun NotepadApp(env: AppEnv) {
             Box {
                 OutlinedButton(onClick = { menuOpen = true }) { Text("Otwórz") }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    val names = env.vault.names()
+                    val names = env.vault.names().filterNot { dev.ofarafal.enklawa.os.AppCatalog.isInternalName(it) }
                     if (names.isEmpty()) {
                         DropdownMenuItem(text = { Text("Brak plików") }, onClick = { menuOpen = false })
                     }

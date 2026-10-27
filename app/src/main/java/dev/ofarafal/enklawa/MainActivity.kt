@@ -89,6 +89,7 @@ class MainActivity : ComponentActivity() {
         runCatching { BrowserProfile.sweepLeftovers() }
         val s = WorldSession.start((application as EnklawaApp).sessionParent)
         val p = BrowserProfile.create(persistent = !amnesiaMode)
+        dev.ofarafal.enklawa.tor.TorManager.begin(applicationContext)
         s.onEnd { p.destroy() }
         session = s
         profile = p
@@ -102,6 +103,7 @@ class MainActivity : ComponentActivity() {
         val dataDir = (application as EnklawaApp).vaults.dataDir(info.id)
         val s = WorldSession.openVault(dataDir, key)
         val p = BrowserProfile.create(persistent = false)
+        dev.ofarafal.enklawa.tor.TorManager.begin(applicationContext)
         s.onEnd { p.destroy() }
         session = s
         profile = p

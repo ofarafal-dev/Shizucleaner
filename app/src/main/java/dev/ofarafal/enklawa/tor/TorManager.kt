@@ -39,8 +39,10 @@ object TorManager {
     sealed interface State {
         data object Off : State
         data object Starting : State
-        /** Demon działa i ma otwarty port SOCKS (obwody budują się w tle; pierwsze żądania mogą potrwać). */
+        /** Demon działa i ma port SOCKS, ale obwody jeszcze się budują (brak potwierdzenia, że ruch przechodzi). */
         data class Running(val socksPort: Int) : State
+        /** Test SOCKS przez Tora zakończył się sukcesem: ruch faktycznie przechodzi. */
+        data class Ready(val socksPort: Int) : State
         data class Failed(val message: String) : State
     }
 
@@ -64,6 +66,22 @@ object TorManager {
 
     val isActive: Boolean get() = state !is State.Off && state !is State.Failed
 
+    /** Tor potwierdzony testem; dopiero wtedy ruch przeglądarki jest naprawdę anonimizowany. */
+    val isReady: Boolean get() = state is State.Ready
+
+    private var probe: Thread? = null
+    private var probeFails = 0
+
+    /**
+     * Domyślny start świata: Tor włączony, a ruch WebView od razu zablokowany (proxy na martwy port), dopóki Tor
+     * nie zgłosi gotowości. Dzięki temu nic nie wychodzi bezpośrednio w czasie uruchamiania.
+     */
+    fun begin(context: Context) {
+        routingWanted = true
+        applyBlocking()
+        start(context)
+    }
+
     fun start(context: Context) {
         if (isActive) return
         val app = context.applicationContext
@@ -76,7 +94,12 @@ object TorManager {
                     TorService.ACTION_STATUS -> when (i.getStringExtra(TorService.EXTRA_STATUS)) {
                         TorService.STATUS_STARTING -> if (state is State.Off) state = State.Starting
                         TorService.STATUS_ON -> onTorOn()
-                        TorService.STATUS_OFF -> if (state !is State.Failed) { state = State.Off; clearRouting() }
+                        TorService.STATUS_OFF -> if (state !is State.Failed) {
+                            state = State.Off
+                            routingApplied = false
+                            // Przy włączonym przekierowaniu brak Tora = brak ruchu, a nie ruch bezpośredni.
+                            if (routingWanted) applyBlocking() else clearRouting()
+                        }
                     }
                     TorService.ACTION_ERROR -> {
                         state = State.Failed("Tor zgłosił błąd")
@@ -115,8 +138,9 @@ object TorManager {
     private fun onTorOn() {
         val port = currentPort()
         if (port > 0) {
-            state = State.Running(port)
+            if (state !is State.Ready) state = State.Running(port)
             if (routingWanted) applyRouting(port)
+            startProbe(port)
         } else if (attempts++ < 30) {
             main.postDelayed({ if (isActive) onTorOn() }, 500)
         } else {
@@ -134,15 +158,21 @@ object TorManager {
         if (!isActive) start(context)
         val port = when (val s = state) {
             is State.Running -> s.socksPort
+            is State.Ready -> s.socksPort
             else -> -1
         }
         if (port > 0) applyRouting(port)
     }
 
+    private fun applyBlocking() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) return
+        val cfg = ProxyConfig.Builder().addProxyRule("socks5://127.0.0.1:1").build()
+        runCatching { ProxyController.getInstance().setProxyOverride(cfg, inline) { } }
+    }
+
     private fun applyRouting(port: Int) {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)) {
             state = State.Failed("Ten WebView nie obsługuje proxy — przekierowanie przez Tor niemożliwe")
-            routingWanted = false
             return
         }
         // Bez addDirect(): gdy proxy nie działa, ruch jest blokowany, a nie idzie bezpośrednio.
@@ -157,10 +187,55 @@ object TorManager {
         }
     }
 
-    fun stop(context: Context) {
+    private fun startProbe(port: Int) {
+        if (probe?.isAlive == true) return
+        probeFails = 0
+        val t = Thread {
+            while (!Thread.currentThread().isInterrupted) {
+                val ok = SocksProbe.canConnect(port)
+                main.post { onProbe(ok, port) }
+                try {
+                    Thread.sleep(if (ok) 30_000L else 4_000L)
+                } catch (e: InterruptedException) {
+                    break
+                }
+            }
+        }
+        t.isDaemon = true
+        probe = t
+        t.start()
+    }
+
+    private fun onProbe(ok: Boolean, port: Int) {
+        if (state is State.Off || state is State.Failed || state is State.Starting) return
+        if (ok) {
+            probeFails = 0
+            state = State.Ready(port)
+        } else if (state is State.Ready && ++probeFails >= 3) {
+            // Pojedynczy błąd nie przełącza stanu; trzy z rzędu tak.
+            state = State.Running(port)
+        }
+    }
+
+    private fun stopProbe() {
+        probe?.interrupt()
+        probe = null
+    }
+
+    /**
+     * Zatrzymuje demona. Z [keepRouting] przekierowanie zostaje „chciane”: ruch WebView jest wtedy blokowany,
+     * a nie wraca po cichu na łącze bezpośrednie. Bez niego (wyjście ze świata) wszystko jest czyszczone.
+     */
+    fun stop(context: Context, keepRouting: Boolean = false) {
+        stopProbe()
         val app = context.applicationContext
-        routingWanted = false
-        clearRouting()
+        if (keepRouting && routingWanted) {
+            routingApplied = false
+            applyBlocking()
+        } else {
+            routingWanted = false
+            clearRouting()
+        }
         receiver?.let {
             runCatching { app.unregisterReceiver(it) }
             runCatching { LocalBroadcastManager.getInstance(app).unregisterReceiver(it) }

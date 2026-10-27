@@ -28,7 +28,8 @@ fun TorApp(env: AppEnv) {
     val statusText = when (st) {
         TorManager.State.Off -> "Wyłączony"
         TorManager.State.Starting -> "Uruchamianie…"
-        is TorManager.State.Running -> "Tor działa (SOCKS 127.0.0.1:${st.socksPort}); pierwsze połączenie może potrwać, gdy budują się obwody"
+        is TorManager.State.Running -> "Tor działa, łączę z siecią… (SOCKS 127.0.0.1:${st.socksPort})"
+        is TorManager.State.Ready -> "Połączono z siecią Tor (SOCKS 127.0.0.1:${st.socksPort})"
         is TorManager.State.Failed -> "Błąd: ${st.message}"
     }
     Column(
@@ -36,10 +37,17 @@ fun TorApp(env: AppEnv) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text("Stan: $statusText", color = MaterialTheme.colorScheme.onSurface)
+        if (TorManager.routingWanted && !TorManager.isReady) {
+            Text(
+                "Przeglądarka i aplikacje web są zablokowane, dopóki Tor nie połączy się z siecią.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                onClick = { if (TorManager.isActive) TorManager.stop(ctx) else TorManager.start(ctx) },
+                onClick = { if (TorManager.isActive) TorManager.stop(ctx, keepRouting = true) else TorManager.start(ctx) },
                 modifier = Modifier.weight(1f),
             ) { Text(if (TorManager.isActive) "Zatrzymaj Tora" else "Uruchom Tora") }
             OutlinedButton(
@@ -53,11 +61,10 @@ fun TorApp(env: AppEnv) {
             Column(Modifier.weight(1f)) {
                 Text("Przeglądarka i aplikacje web przez Tor", color = MaterialTheme.colorScheme.onSurface)
                 Text(
-                    if (TorManager.routingApplied) "Włączone: ruch WebView idzie przez Tor."
-                    else if (TorManager.routingWanted) "Czekam, aż Tor poda port…"
-                    else "Wyłączone: przeglądarka łączy się bezpośrednio.",
+                    if (TorManager.routingWanted) "Włączone (domyślnie): ruch WebView idzie przez Tor albo jest blokowany."
+                    else "WYŁĄCZONE: przeglądarka łączy się bezpośrednio, bez Tora.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (TorManager.routingWanted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                 )
             }
             Switch(checked = TorManager.routingWanted, onCheckedChange = { TorManager.setRouting(ctx, it) })
@@ -68,7 +75,6 @@ fun TorApp(env: AppEnv) {
             "• To systemowy WebView przez Tor, a nie Tor Browser: strony mogą rozpoznać Cię po odcisku przeglądarki, a nie tylko po IP.\n" +
                 "• Gdy Tor padnie przy włączonym przekierowaniu, przeglądarka przestaje łączyć się z internetem (nie wraca na łącze bezpośrednie).\n" +
                 "• Przekierowanie dotyczy WebView. Sprawdzanie aktualizacji z ekranu wejścia idzie poza Torem.\n" +
-                "• Strony otwarte przed włączeniem przekierowania mogły już połączyć się bezpośrednio — otwórz je od nowa.\n" +
                 "• Tor działa, dopóki aplikacja jest na wierzchu; system może go zatrzymać w tle.\n" +
                 "• Przy wyjściu ze świata stan Tora jest usuwany z danych aplikacji.",
             style = MaterialTheme.typography.bodySmall,

@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.ofarafal.enklawa.browser.SecureWebView
 import dev.ofarafal.enklawa.browser.UrlInput
+import dev.ofarafal.enklawa.os.AppCatalog
+import dev.ofarafal.enklawa.os.InstalledApp
 
 @Composable
 fun BrowserApp(env: AppEnv, startUrl: String? = null) {
@@ -47,12 +49,28 @@ fun BrowserApp(env: AppEnv, startUrl: String? = null) {
     var canGoBack by remember { mutableStateOf(false) }
     var address by remember { mutableStateOf("") }
     var field by remember { mutableStateOf<EditText?>(null) }
+    var pageTitle by remember { mutableStateOf<String?>(null) }
+    var pageIcon by remember { mutableStateOf<Bitmap?>(null) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val origin = AppCatalog.originOf(address)
+    val installed = origin?.let { AppStore.find(it) }
+
+    // Tor jest domyślny: do pierwszej gotowości zamiast przeglądarki pokazujemy ekran oczekiwania (WebView w ogóle nie powstaje).
+    var passed by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(dev.ofarafal.enklawa.tor.TorManager.isReady) {
+        if (dev.ofarafal.enklawa.tor.TorManager.isReady) passed = true
+    }
 
     // Wstecz w historii strony tylko gdy to okno jest aktywne; inaczej back obsługuje powłoka.
     BackHandler(enabled = env.active && canGoBack) { webView?.goBack() }
 
     val go = rememberUpdatedState {
         webView?.loadUrl(UrlInput.resolve(address))
+    }
+
+    if (dev.ofarafal.enklawa.tor.TorManager.routingWanted && !passed && !dev.ofarafal.enklawa.tor.TorManager.isReady) {
+        TorGate()
+        return
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -67,11 +85,16 @@ fun BrowserApp(env: AppEnv, startUrl: String? = null) {
                 onGo = { go.value() },
                 onReady = { field = it },
             )
-            if (dev.ofarafal.enklawa.tor.TorManager.routingApplied) {
-                GlyphIcon(Glyph.Onion, Modifier.size(22.dp), tint = Color(0xFFC9B6FF))
+            GlyphIcon(Glyph.Onion, Modifier.size(22.dp), tint = torIndicatorColor())
+            if (origin != null && installed == null) {
+                ToolButton(Glyph.Apps) {
+                    AppStore.install(env.vault, InstalledApp(AppCatalog.displayName(pageTitle, origin), origin), pageIcon)
+                    android.widget.Toast.makeText(ctx, "Zainstalowano jako aplikację", android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
             ToolButton(Glyph.Reload) { webView?.reload() }
         }
+        TorStatusStrip()
         if (progress in 1..99) {
             LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
         }
@@ -89,6 +112,8 @@ fun BrowserApp(env: AppEnv, startUrl: String? = null) {
 
                         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                             address = url
+                            pageTitle = null
+                            pageIcon = null
                             field?.takeIf { !it.hasFocus() }?.setText(url)
                             canGoBack = view.canGoBack()
                         }
@@ -100,6 +125,18 @@ fun BrowserApp(env: AppEnv, startUrl: String? = null) {
                     wv.webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(view: WebView, newProgress: Int) {
                             progress = newProgress
+                        }
+
+                        override fun onReceivedTitle(view: WebView, title: String?) {
+                            pageTitle = title
+                        }
+
+                        override fun onReceivedIcon(view: WebView, icon: Bitmap?) {
+                            pageIcon = icon
+                            val o = AppCatalog.originOf(view.url ?: "")
+                            if (icon != null && o != null && AppStore.find(o) != null && AppStore.iconFor(o) == null) {
+                                AppStore.setIcon(env.vault, o, icon)
+                            }
                         }
                     }
                     webView = wv

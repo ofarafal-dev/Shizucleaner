@@ -2,8 +2,10 @@ package dev.ofarafal.enklawa.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import dev.ofarafal.enklawa.browser.BrowserProfile
 import dev.ofarafal.enklawa.crypto.SessionVault
+import dev.ofarafal.enklawa.os.AppCatalog
 import dev.ofarafal.enklawa.os.WebApps
 
 /** Wszystko, czego aplikacja w oknie może potrzebować od świata, w którym działa. */
@@ -27,6 +29,9 @@ data class AppDef(
     val singleton: Boolean = true,
     val available: Boolean = true,
     val content: @Composable (AppEnv) -> Unit = {},
+    /** Własna ikona (np. favicon strony) albo litera; gdy brak obu, rysujemy [glyph]. */
+    val iconBitmap: ImageBitmap? = null,
+    val letter: String? = null,
 )
 
 val AppRegistry: List<AppDef> = listOf(
@@ -41,9 +46,26 @@ val AppRegistry: List<AppDef> = listOf(
     AppDef("tor", "Tor", Glyph.Onion, Color(0xFFA48BE0), Color(0xFF311B92), content = { TorApp(it) }),
 )
 
-/** Aplikacje z rejestru albo strony otwarte jako aplikacje (id „web:<adres>”). */
+private val TilePalette = listOf(
+    Color(0xFF5BC8FF) to Color(0xFF1565C0),
+    Color(0xFF8EE08F) to Color(0xFF2E7D32),
+    Color(0xFFFFB38A) to Color(0xFFD1491E),
+    Color(0xFFD08CE6) to Color(0xFF6A1B9A),
+    Color(0xFFFFE27A) to Color(0xFFF08A00),
+    Color(0xFF9AD0FF) to Color(0xFF2F6BD6),
+)
+
+/** Aplikacje z rejestru albo strony otwarte jako aplikacje (id „web:<adres>”; zainstalowane mają nazwę i ikonę z katalogu). */
 fun appById(id: String): AppDef? =
     AppRegistry.firstOrNull { it.id == id }
         ?: WebApps.urlOf(id)?.let { url ->
-            AppDef(id, WebApps.titleFor(url), Glyph.Globe, Color(0xFF5BC8FF), Color(0xFF1565C0), content = { BrowserApp(it, startUrl = url) })
+            val installed = AppStore.find(url)
+            val title = installed?.name ?: WebApps.titleFor(url)
+            val (top, bottom) = TilePalette[(url.hashCode() and 0x7fffffff) % TilePalette.size]
+            AppDef(
+                id, title, Glyph.Globe, top, bottom,
+                content = { BrowserApp(it, startUrl = url) },
+                iconBitmap = AppStore.iconFor(url),
+                letter = AppCatalog.initial(title),
+            )
         }
