@@ -250,13 +250,14 @@ private fun XpWindow(
     }
     // Zminimalizowane okno zostaje w kompozycji (żeby np. strona w przeglądarce nie zginęła), ale poza ekranem.
     val hidden = if (win.minimized) Modifier.offset(x = 6000.dp) else Modifier
-    val shape = RoundedCornerShape(topStart = 9.dp, topEnd = 9.dp)
+    val shape = RoundedCornerShape(14.dp)
 
     Column(
         hidden
             .then(geometry)
             .clip(shape)
             .background(if (active) Xp.Frame else Xp.FrameInactive)
+            .border(1.dp, if (active) Xp.Frame else Xp.FrameInactive, shape)
             .pointerInput(Unit) {
                 // Obserwujemy dotknięcie bez konsumowania, żeby okno wyszło na wierzch.
                 awaitPointerEventScope {
@@ -270,7 +271,7 @@ private fun XpWindow(
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(38.dp)
                 .background(Brush.verticalGradient(if (active) Xp.TitleActive else Xp.TitleInactive))
                 .pointerInput(win.maximized) {
                     if (!win.maximized) {
@@ -287,12 +288,11 @@ private fun XpWindow(
             Text(
                 win.title,
                 color = Color.White,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Medium,
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = LabelShadow,
-                modifier = Modifier.weight(1f).padding(start = 6.dp),
+                modifier = Modifier.weight(1f).padding(start = 8.dp),
             )
             CaptionButton(CaptionKind.Minimize, onMinimize)
             CaptionButton(if (win.maximized) CaptionKind.Restore else CaptionKind.Maximize, onMaximize)
@@ -302,7 +302,7 @@ private fun XpWindow(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(start = 3.dp, end = 3.dp, bottom = 3.dp)
+                .padding(start = 1.dp, end = 1.dp, bottom = 1.dp)
                 .background(Xp.Body),
         ) {
             XpLightTheme {
@@ -316,23 +316,17 @@ private enum class CaptionKind { Minimize, Maximize, Restore, Close }
 
 @Composable
 private fun CaptionButton(kind: CaptionKind, onClick: () -> Unit) {
-    val colors = if (kind == CaptionKind.Close) {
-        listOf(Color(0xFFE9886A), Color(0xFFD1491E))
-    } else {
-        listOf(Color(0xFF6FA4F7), Color(0xFF2A63DC))
-    }
-    val shape = RoundedCornerShape(5.dp)
+    val bg = if (kind == CaptionKind.Close) Color(0xFFE5574B) else Color(0x33FFFFFF)
     Box(
         Modifier
-            .padding(end = 4.dp)
-            .size(24.dp)
-            .clip(shape)
-            .background(Brush.verticalGradient(colors))
-            .border(1.dp, Color.White.copy(alpha = 0.85f), shape)
+            .padding(end = 6.dp)
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(bg)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(12.dp)) {
+        Canvas(Modifier.size(11.dp)) {
             val s = size.minDimension
             val t = 2.2.dp.toPx()
             when (kind) {
@@ -386,78 +380,69 @@ private fun rememberBattery(): Pair<Int, Boolean> {
 private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onWindow: (Int) -> Unit) {
     val now = rememberNow()
     val (level, charging) = rememberBattery()
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .background(Brush.verticalGradient(Xp.Taskbar)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val dock = RoundedCornerShape(26.dp)
+    Box(Modifier.fillMaxWidth().background(Color(0xFF07090F)).padding(horizontal = 8.dp, vertical = 6.dp)) {
         Row(
             Modifier
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp))
-                .background(Brush.verticalGradient(Xp.StartGreen))
-                .clickable(onClick = onStart)
-                .padding(horizontal = 14.dp),
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(dock)
+                .background(Brush.verticalGradient(Xp.Taskbar))
+                .border(1.dp, Color(0xFF2A3342), dock)
+                .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GlyphIcon(Glyph.Logo, Modifier.size(22.dp))
-            Text(
-                "start",
-                color = Color.White,
-                fontStyle = FontStyle.Italic,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 20.sp,
-                style = LabelShadow,
-                modifier = Modifier.padding(start = 6.dp),
-            )
-        }
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(Xp.StartGreen))
+                    .clickable(onClick = onStart),
+                contentAlignment = Alignment.Center,
+            ) { GlyphIcon(Glyph.Logo, Modifier.size(24.dp), tint = Color(0xFF06231E)) }
 
-        Row(
-            Modifier.weight(1f).padding(horizontal = 6.dp).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            wm.windows.forEach { win ->
-                val app = appById(win.appId)
-                val current = wm.activeId == win.id && !win.minimized
-                val shape = RoundedCornerShape(5.dp)
-                Row(
-                    Modifier
-                        .width(112.dp)
-                        .height(34.dp)
-                        .clip(shape)
-                        .background(if (current) Color(0xFF1E3FA8) else Color(0xFF3C81F3))
-                        .border(1.dp, if (current) Color(0xFF0B2570) else Color(0xFF8DB6F8), shape)
-                        .clickable { onWindow(win.id) }
-                        .padding(horizontal = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (app != null) GlyphIcon(app.glyph, Modifier.size(16.dp))
-                    Text(
-                        win.title,
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 5.dp),
-                    )
+            Row(
+                Modifier.weight(1f).padding(horizontal = 8.dp).horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                wm.windows.forEach { win ->
+                    val app = appById(win.appId)
+                    val current = wm.activeId == win.id && !win.minimized
+                    val shape = RoundedCornerShape(18.dp)
+                    Row(
+                        Modifier
+                            .width(112.dp)
+                            .height(36.dp)
+                            .clip(shape)
+                            .background(if (current) Color(0x337FDBCA) else Color(0x14FFFFFF))
+                            .border(1.dp, if (current) Xp.Accent.copy(alpha = 0.7f) else Color.Transparent, shape)
+                            .clickable { onWindow(win.id) }
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (app != null) GlyphIcon(app.glyph, Modifier.size(16.dp))
+                        Text(
+                            win.title,
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
                 }
             }
-        }
 
-        Row(
-            Modifier
-                .fillMaxHeight()
-                .background(Brush.verticalGradient(Xp.Tray))
-                .padding(horizontal = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            GlyphIcon(Glyph.Lock, Modifier.size(16.dp), tint = if (amnesia) Color(0xFF9FFFE0) else Color.White.copy(alpha = 0.7f))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Text((if (charging) "⚡" else "") + "$level%", color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp)
+            Row(
+                Modifier.fillMaxHeight().padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                GlyphIcon(Glyph.Lock, Modifier.size(16.dp), tint = if (amnesia) Color(0xFF9FFFE0) else Color.White.copy(alpha = 0.6f))
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
+                    Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text((if (charging) "⚡" else "") + "$level%", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+                }
             }
         }
     }
@@ -469,7 +454,7 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
 private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: () -> Unit, onDismiss: () -> Unit) {
     var allPrograms by remember { mutableStateOf(false) }
     val noRipple = remember { MutableInteractionSource() }
-    val menuShape = RoundedCornerShape(topStart = 9.dp, topEnd = 9.dp)
+    val menuShape = RoundedCornerShape(20.dp)
 
     Box(
         Modifier
@@ -479,17 +464,18 @@ private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: (
         Column(
             Modifier
                 .align(Alignment.BottomStart)
+                .padding(start = 8.dp, bottom = 6.dp)
                 .fillMaxWidth(0.95f)
                 .widthIn(max = 350.dp)
                 .clip(menuShape)
                 .background(Xp.Frame)
-                .padding(2.dp)
+                .padding(1.dp)
                 .clickable(interactionSource = noRipple, indication = null, onClick = {}),
         ) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                    .clip(RoundedCornerShape(topStart = 19.dp, topEnd = 19.dp))
                     .background(Brush.horizontalGradient(Xp.MenuHeader))
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -514,7 +500,7 @@ private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: (
             }
 
             Row(Modifier.fillMaxWidth().height(330.dp)) {
-                Column(Modifier.weight(1.15f).fillMaxHeight().background(Color.White).padding(vertical = 6.dp)) {
+                Column(Modifier.weight(1.15f).fillMaxHeight().background(Xp.Panel).padding(vertical = 6.dp)) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                         if (allPrograms) {
                             MenuLine("◂ Wstecz", null, bold = true, color = Xp.Link) { allPrograms = false }
@@ -527,7 +513,7 @@ private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: (
                             }
                         }
                     }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD6D6D6)))
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF2A3342)))
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -535,16 +521,16 @@ private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: (
                             .padding(horizontal = 10.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Wszystkie programy", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black, modifier = Modifier.weight(1f))
+                        Text("Wszystkie programy", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFFE4E8EC), modifier = Modifier.weight(1f))
                         Box(
-                            Modifier.size(20.dp).clip(CircleShape).background(Color(0xFF3AA33A)),
+                            Modifier.size(20.dp).clip(CircleShape).background(Xp.Accent),
                             contentAlignment = Alignment.Center,
-                        ) { Text("▸", color = Color.White, fontSize = 12.sp) }
+                        ) { Text("▸", color = Color(0xFF06231E), fontSize = 12.sp) }
                     }
                 }
                 Column(Modifier.weight(0.85f).fillMaxHeight().background(Xp.MenuRight).padding(vertical = 6.dp)) {
                     RightIds.mapNotNull { appById(it) }.forEach { app ->
-                        MenuLine(app.title, app, bold = true, color = Color(0xFF1E3A8A), small = true) { onLaunch(app.id) }
+                        MenuLine(app.title, app, bold = true, color = Color(0xFFE4E8EC), small = true) { onLaunch(app.id) }
                     }
                 }
             }
@@ -552,7 +538,6 @@ private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: (
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(bottomStart = 0.dp, bottomEnd = 0.dp))
                     .background(Brush.horizontalGradient(Xp.MenuHeader))
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.End,
@@ -583,7 +568,7 @@ private fun MenuLine(
     title: String,
     app: AppDef?,
     bold: Boolean = false,
-    color: Color = Color.Black,
+    color: Color = Color(0xFFE4E8EC),
     small: Boolean = false,
     enabled: Boolean = true,
     onClick: () -> Unit,

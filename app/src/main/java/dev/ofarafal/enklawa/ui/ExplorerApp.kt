@@ -45,7 +45,7 @@ fun ExplorerApp(env: AppEnv) {
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(Color(0xFF1C2530))
                 .verticalScroll(rememberScrollState())
                 .padding(6.dp),
         ) {

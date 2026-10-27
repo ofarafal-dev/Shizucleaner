@@ -94,7 +94,7 @@ fun SettingsApp(env: AppEnv) {
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().background(Color.White).padding(12.dp),
+        Modifier.fillMaxWidth().background(Color(0xFF1C2530)).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(title, fontWeight = FontWeight.Bold, color = Xp.Link)

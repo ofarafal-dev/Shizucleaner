@@ -3,7 +3,7 @@ package dev.ofarafal.enklawa.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -14,34 +14,36 @@ import androidx.compose.ui.graphics.Path
 
 /** Paleta w duchu Luna z Windows XP. Wszystkie grafiki są własne (rysowane w kodzie). */
 object Xp {
-    val TitleActive = listOf(Color(0xFF0A5BEE), Color(0xFF3D8DFB), Color(0xFF0A4FD6))
-    val TitleInactive = listOf(Color(0xFF7A96DF), Color(0xFF9DB4EC), Color(0xFF7A96DF))
-    val Frame = Color(0xFF0831D9)
-    val FrameInactive = Color(0xFF6582D4)
-    val Body = Color(0xFFECE9D8)
-    val BodyBorder = Color(0xFFACA899)
-    val Link = Color(0xFF1B4FC4)
-    val Taskbar = listOf(Color(0xFF3F86F0), Color(0xFF2461DA), Color(0xFF1B4FC4))
-    val StartGreen = listOf(Color(0xFF55BB55), Color(0xFF2E8B2E), Color(0xFF3A9E3A))
-    val Tray = listOf(Color(0xFF1AA0F2), Color(0xFF1479D8))
-    val MenuHeader = listOf(Color(0xFF1C5BD8), Color(0xFF3E8AF0))
-    val MenuRight = Color(0xFFD3E5FA)
+    val TitleActive = listOf(Color(0xFF273142), Color(0xFF1D2531))
+    val TitleInactive = listOf(Color(0xFF1A202A), Color(0xFF161B24))
+    val Frame = Color(0xFF3A465A)
+    val FrameInactive = Color(0xFF262E3B)
+    val Body = Color(0xFF10151C)
+    val BodyBorder = Color(0xFF2A3342)
+    val Link = Color(0xFF7FDBCA)
+    val Taskbar = listOf(Color(0xF2171D27), Color(0xF2111620))
+    val StartGreen = listOf(Color(0xFF7FDBCA), Color(0xFF3AA6C8))
+    val Tray = listOf(Color(0x00000000), Color(0x00000000))
+    val MenuHeader = listOf(Color(0xFF223049), Color(0xFF1A2434))
+    val MenuRight = Color(0xFF161D28)
+    val Panel = Color(0xFF131A24)
+    val Accent = Color(0xFF7FDBCA)
 }
 
-/** Motyw jasny dla treści okien (beżowe tło, czarny tekst), niezależny od ciemnego motywu powłoki. */
+/** Motyw treści okien: ciemny, spójny z powłoką. */
 @Composable
 fun XpLightTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Color(0xFF245EDC),
-            onPrimary = Color.White,
+        colorScheme = darkColorScheme(
+            primary = Color(0xFF7FDBCA),
+            onPrimary = Color(0xFF00201B),
             background = Xp.Body,
-            onBackground = Color.Black,
+            onBackground = Color(0xFFE4E8EC),
             surface = Xp.Body,
-            onSurface = Color.Black,
-            surfaceVariant = Color.White,
-            onSurfaceVariant = Color(0xFF555555),
-            error = Color(0xFFC62828),
+            onSurface = Color(0xFFE4E8EC),
+            surfaceVariant = Color(0xFF1C2530),
+            onSurfaceVariant = Color(0xFFA9B4BF),
+            error = Color(0xFFFF8A80),
         ),
         content = content,
     )
@@ -55,36 +57,30 @@ fun Wallpaper(modifier: Modifier = Modifier.fillMaxSize()) {
         val h = size.height
         drawRect(
             Brush.verticalGradient(
-                0f to Color(0xFF2B66D3),
-                0.55f to Color(0xFF8FC1F2),
-                1f to Color(0xFFBFE0FA),
+                0f to Color(0xFF0B1220),
+                0.6f to Color(0xFF0F1A2E),
+                1f to Color(0xFF07090F),
             ),
         )
-        fun cloud(cx: Float, cy: Float, s: Float) {
-            val c = Color.White.copy(alpha = 0.85f)
-            drawOval(c, Offset(cx - s, cy - s * 0.28f), Size(s * 2f, s * 0.56f))
-            drawOval(c, Offset(cx - s * 0.6f, cy - s * 0.5f), Size(s * 1.1f, s * 0.7f))
-            drawOval(c, Offset(cx, cy - s * 0.42f), Size(s * 0.9f, s * 0.6f))
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0x557FDBCA), Color(0x007FDBCA)),
+                center = Offset(w * 0.2f, h * 0.18f), radius = w * 0.75f,
+            ),
+            radius = w * 0.75f, center = Offset(w * 0.2f, h * 0.18f),
+        )
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0x449A7BFF), Color(0x009A7BFF)),
+                center = Offset(w * 0.9f, h * 0.7f), radius = w * 0.9f,
+            ),
+            radius = w * 0.9f, center = Offset(w * 0.9f, h * 0.7f),
+        )
+        val wave = Path().apply {
+            moveTo(0f, h * 0.82f)
+            cubicTo(w * 0.3f, h * 0.74f, w * 0.65f, h * 0.9f, w, h * 0.78f)
+            lineTo(w, h); lineTo(0f, h); close()
         }
-        cloud(w * 0.25f, h * 0.2f, w * 0.18f)
-        cloud(w * 0.72f, h * 0.12f, w * 0.14f)
-        cloud(w * 0.55f, h * 0.34f, w * 0.1f)
-
-        val back = Path().apply {
-            moveTo(0f, h * 0.62f)
-            cubicTo(w * 0.25f, h * 0.5f, w * 0.6f, h * 0.58f, w, h * 0.5f)
-            lineTo(w, h)
-            lineTo(0f, h)
-            close()
-        }
-        drawPath(back, Brush.verticalGradient(listOf(Color(0xFF6CC33A), Color(0xFF2F8A1B)), startY = h * 0.5f, endY = h))
-        val front = Path().apply {
-            moveTo(0f, h * 0.78f)
-            cubicTo(w * 0.3f, h * 0.64f, w * 0.7f, h * 0.84f, w, h * 0.7f)
-            lineTo(w, h)
-            lineTo(0f, h)
-            close()
-        }
-        drawPath(front, Brush.verticalGradient(listOf(Color(0xFF4FAE26), Color(0xFF1F6E12)), startY = h * 0.64f, endY = h))
+        drawPath(wave, Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x00FFFFFF)), startY = h * 0.75f, endY = h))
     }
 }

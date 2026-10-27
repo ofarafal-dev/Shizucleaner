@@ -48,7 +48,7 @@ fun ComputerApp(env: AppEnv) {
 @Composable
 private fun Group(title: String, content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().background(Color.White).padding(10.dp),
+        Modifier.fillMaxWidth().background(Color(0xFF1C2530)).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(title, fontWeight = FontWeight.Bold, color = Xp.Link)
