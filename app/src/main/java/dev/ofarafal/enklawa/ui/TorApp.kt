@@ -28,8 +28,7 @@ fun TorApp(env: AppEnv) {
     val statusText = when (st) {
         TorManager.State.Off -> "Wyłączony"
         TorManager.State.Starting -> "Uruchamianie…"
-        is TorManager.State.Connecting -> "Tor działa, buduję obwody (SOCKS 127.0.0.1:${st.socksPort})"
-        is TorManager.State.Ready -> "Połączono z siecią Tor (SOCKS 127.0.0.1:${st.socksPort})"
+        is TorManager.State.Running -> "Tor działa (SOCKS 127.0.0.1:${st.socksPort}); pierwsze połączenie może potrwać, gdy budują się obwody"
         is TorManager.State.Failed -> "Błąd: ${st.message}"
     }
     Column(

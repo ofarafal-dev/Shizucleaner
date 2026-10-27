@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
 import androidx.webkit.WebViewFeature
@@ -38,9 +39,8 @@ object TorManager {
     sealed interface State {
         data object Off : State
         data object Starting : State
-        /** Demon działa, buduje obwody. */
-        data class Connecting(val socksPort: Int) : State
-        data class Ready(val socksPort: Int) : State
+        /** Demon działa i ma otwarty port SOCKS (obwody budują się w tle; pierwsze żądania mogą potrwać). */
+        data class Running(val socksPort: Int) : State
         data class Failed(val message: String) : State
     }
 
@@ -76,10 +76,6 @@ object TorManager {
                     TorService.ACTION_STATUS -> when (i.getStringExtra(TorService.EXTRA_STATUS)) {
                         TorService.STATUS_STARTING -> if (state is State.Off) state = State.Starting
                         TorService.STATUS_ON -> onTorOn()
-                        TorService.STATUS_CLIENT_CIRCUIT_ESTABLISHED -> {
-                            val port = currentPort()
-                            if (port > 0) state = State.Ready(port)
-                        }
                         TorService.STATUS_OFF -> if (state !is State.Failed) { state = State.Off; clearRouting() }
                     }
                     TorService.ACTION_ERROR -> {
@@ -89,14 +85,13 @@ object TorManager {
             }
         }
         receiver = r
-        ContextCompat.registerReceiver(
-            app, r,
-            IntentFilter().apply {
-                addAction(TorService.ACTION_STATUS)
-                addAction(TorService.ACTION_ERROR)
-            },
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
+        val filter = IntentFilter().apply {
+            addAction(TorService.ACTION_STATUS)
+            addAction(TorService.ACTION_ERROR)
+        }
+        // Różne wersje biblioteki wysyłają status zwykłym albo lokalnym broadcastem; słuchamy obu.
+        ContextCompat.registerReceiver(app, r, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        LocalBroadcastManager.getInstance(app).registerReceiver(r, filter)
 
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -120,7 +115,7 @@ object TorManager {
     private fun onTorOn() {
         val port = currentPort()
         if (port > 0) {
-            if (state !is State.Ready) state = State.Connecting(port)
+            state = State.Running(port)
             if (routingWanted) applyRouting(port)
         } else if (attempts++ < 30) {
             main.postDelayed({ if (isActive) onTorOn() }, 500)
@@ -138,8 +133,7 @@ object TorManager {
         }
         if (!isActive) start(context)
         val port = when (val s = state) {
-            is State.Connecting -> s.socksPort
-            is State.Ready -> s.socksPort
+            is State.Running -> s.socksPort
             else -> -1
         }
         if (port > 0) applyRouting(port)
@@ -167,7 +161,10 @@ object TorManager {
         val app = context.applicationContext
         routingWanted = false
         clearRouting()
-        receiver?.let { runCatching { app.unregisterReceiver(it) } }
+        receiver?.let {
+            runCatching { app.unregisterReceiver(it) }
+            runCatching { LocalBroadcastManager.getInstance(app).unregisterReceiver(it) }
+        }
         receiver = null
         connection?.let { runCatching { app.unbindService(it) } }
         connection = null
