@@ -14,6 +14,7 @@ class WorldSession private constructor(
     val root: File,
     val key: SessionKey,
     val vault: SessionVault,
+    private val persistent: Boolean = false,
 ) {
     private val cleanups = mutableListOf<() -> Unit>()
     private var ended = false
@@ -33,6 +34,12 @@ class WorldSession private constructor(
         var failures = 0
         cleanups.asReversed().forEach { if (runCatching(it).isFailure) failures++ }
         cleanups.clear()
+        if (persistent) {
+            // Sejf trwały: tylko zamykamy (klucz znika z RAM), pliki zostają.
+            if (runCatching { vault.lock() }.isFailure) failures++
+            key.wipe()
+            return failures
+        }
         if (runCatching { vault.destroy() }.isFailure) failures++
         key.wipe()
         SessionVault.deleteRecursively(root)
@@ -50,6 +57,10 @@ class WorldSession private constructor(
             val key = SessionKey.generate(random)
             return WorldSession(root, key, SessionVault(File(root, "vault"), key, random))
         }
+
+        /** Otwiera istniejący sejf (klucz z hasła). Katalog sejfu nie podlega sprzątaniu pozostałości. */
+        fun openVault(dataDir: File, key: SessionKey, random: SecureRandom = SecureRandom()): WorldSession =
+            WorldSession(dataDir, key, SessionVault(dataDir, key, random, persistent = true), persistent = true)
 
         /**
          * Po zabiciu procesu (crash, wymuszone zamknięcie) mogły zostać katalogi poprzedniej sesji.

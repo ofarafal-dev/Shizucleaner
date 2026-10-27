@@ -68,6 +68,8 @@ dependencies {
     implementation("androidx.webkit:webkit:1.12.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+
     testImplementation("junit:junit:4.13.2")
     // android.jar w testach JVM ma tylko atrapy org.json; prawdziwa implementacja do testu parsera wydań.
     testImplementation("org.json:json:20240303")
