@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -34,12 +37,13 @@ import dev.ofarafal.enklawa.update.Updater
 import kotlinx.coroutines.launch
 
 @Composable
-fun EntryScreen(onEnterAmnesia: () -> Unit) {
+fun EntryScreen(onEnter: (amnesia: Boolean) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var check by remember { mutableStateOf<CheckResult?>(null) }
     var progress by remember { mutableStateOf<Float?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    var amnesia by remember { mutableStateOf(false) } // domyślnie wyłączona
 
     LaunchedEffect(Unit) { check = Updater.check() }
 
@@ -59,11 +63,23 @@ fun EntryScreen(onEnterAmnesia: () -> Unit) {
         )
         Spacer(Modifier.height(8.dp))
 
-        Button(onClick = onEnterAmnesia, modifier = Modifier.fillMaxWidth()) {
-            Text("Wejdź — tryb amnezji")
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Tryb amnezji", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (amnesia) "Włączony: po wyjściu klucz sesji znika, pliki i profil przeglądarki są kasowane."
+                    else "Wyłączony: przeglądarka zachowuje dane (ciasteczka, logowania) między wejściami, bez szyfrowania.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = amnesia, onCheckedChange = { amnesia = it })
+        }
+        Button(onClick = { onEnter(amnesia) }, modifier = Modifier.fillMaxWidth()) {
+            Text("Wejdź")
         }
         OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-            Text("Wejdź — z pamięcią (wkrótce)")
+            Text("Z pamięcią i hasłem — szyfrowane magazyny (wkrótce)")
         }
 
         Spacer(Modifier.height(8.dp))

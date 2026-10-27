@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private var profile by mutableStateOf<BrowserProfile?>(null)
     private var screen by mutableStateOf(Screen.Desktop)
     private var ending by mutableStateOf(false)
+    private var amnesia by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,10 +58,11 @@ class MainActivity : ComponentActivity() {
                         ending -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("Niszczenie świata…")
                         }
-                        s == null || p == null -> EntryScreen(onEnterAmnesia = ::enterWorld)
+                        s == null || p == null -> EntryScreen(onEnter = ::enterWorld)
                         screen == Screen.Browser -> BrowserScreen(p, onClose = { screen = Screen.Desktop })
                         else -> DesktopScreen(
                             isolatedProfile = p.isolated,
+                            amnesia = amnesia,
                             onOpenBrowser = { screen = Screen.Browser },
                             onExit = ::exitWorld,
                         )
@@ -70,11 +72,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun enterWorld() {
+    private fun enterWorld(amnesiaMode: Boolean) {
+        amnesia = amnesiaMode
         // Profile po przerwanym procesie (crash) — usuwamy, zanim zaczniemy nową sesję.
         runCatching { BrowserProfile.sweepLeftovers() }
         val s = WorldSession.start((application as EnklawaApp).sessionParent)
-        val p = BrowserProfile.create()
+        val p = BrowserProfile.create(persistent = !amnesiaMode)
         s.onEnd { p.destroy() }
         session = s
         profile = p

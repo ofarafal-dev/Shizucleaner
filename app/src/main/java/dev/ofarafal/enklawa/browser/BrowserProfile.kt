@@ -15,7 +15,11 @@ import java.security.SecureRandom
  * Wymaga WebView z obsługą MULTI_PROFILE. Gdy go brak, [isolated] == false i przeglądarka działa
  * na profilu domyślnym, a przy wyjściu czyścimy go ręcznie (słabsza gwarancja — UI to pokazuje).
  */
-class BrowserProfile private constructor(val name: String, val isolated: Boolean) {
+class BrowserProfile private constructor(
+    val name: String,
+    val isolated: Boolean,
+    val persistent: Boolean = false,
+) {
 
     fun attach(webView: WebView) {
         if (isolated) WebViewCompat.setProfile(webView, name)
@@ -23,6 +27,8 @@ class BrowserProfile private constructor(val name: String, val isolated: Boolean
 
     /** Wywołać PO zniszczeniu wszystkich WebView tego profilu — inaczej deleteProfile rzuci wyjątek. */
     fun destroy(): Boolean {
+        // Profil zwykłego (nie-amnezyjnego) świata zostaje; kasuje go dopiero użytkownik.
+        if (persistent) return true
         return runCatching {
             if (isolated) {
                 ProfileStore.getInstance().deleteProfile(name)
@@ -37,10 +43,20 @@ class BrowserProfile private constructor(val name: String, val isolated: Boolean
     companion object {
         const val PREFIX = "enk_"
 
+        /** Nazwa celowo NIE zaczyna się od PREFIX, żeby sprzątanie po amnezji jej nie ruszało. */
+        const val PERSISTENT_NAME = "enkp_main"
+
+        /** Które profile sprzątanie po przerwanej sesji amnezji ma usunąć. */
+        fun leftoversToSweep(names: Collection<String>): List<String> = names.filter { it.startsWith(PREFIX) }
+
         fun isSupported(): Boolean = WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
 
-        fun create(random: SecureRandom = SecureRandom()): BrowserProfile {
-            if (!isSupported()) return BrowserProfile("", false)
+        fun create(persistent: Boolean = false, random: SecureRandom = SecureRandom()): BrowserProfile {
+            if (!isSupported()) return BrowserProfile("", false, persistent)
+            if (persistent) {
+                ProfileStore.getInstance().getOrCreateProfile(PERSISTENT_NAME)
+                return BrowserProfile(PERSISTENT_NAME, true, true)
+            }
             val id = ByteArray(8).also(random::nextBytes).joinToString("") { "%02x".format(it) }
             val name = PREFIX + id
             ProfileStore.getInstance().getOrCreateProfile(name)
@@ -52,7 +68,7 @@ class BrowserProfile private constructor(val name: String, val isolated: Boolean
             if (!isSupported()) return 0
             val store = ProfileStore.getInstance()
             var n = 0
-            store.allProfileNames.filter { it.startsWith(PREFIX) }.forEach {
+            leftoversToSweep(store.allProfileNames).forEach {
                 if (runCatching { store.deleteProfile(it) }.getOrDefault(false)) n++
             }
             return n

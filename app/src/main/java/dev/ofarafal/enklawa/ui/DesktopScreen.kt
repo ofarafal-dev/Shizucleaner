@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun DesktopScreen(
     isolatedProfile: Boolean,
+    amnesia: Boolean,
     onOpenBrowser: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -37,7 +38,8 @@ fun DesktopScreen(
     ) {
         Text("Enklawa", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
         Text(
-            "Tryb amnezji · klucz sesji tylko w RAM",
+            if (amnesia) "Tryb amnezji · klucz sesji tylko w RAM"
+            else "Tryb zwykły · przeglądarka zachowuje dane (bez szyfrowania)",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -55,7 +57,10 @@ fun DesktopScreen(
 
         Spacer(Modifier.height(16.dp))
         Text(
-            if (isolatedProfile) "Przeglądarka: izolowany profil WebView (usuwany przy wyjściu)."
+            if (isolatedProfile) {
+                if (amnesia) "Przeglądarka: izolowany profil WebView (usuwany przy wyjściu)."
+                else "Przeglądarka: osobny profil WebView, zachowany między wejściami."
+            }
             else "Przeglądarka: ten WebView nie obsługuje osobnych profili — używa profilu domyślnego i czyści go przy wyjściu. Zaktualizuj Android System WebView.",
             style = MaterialTheme.typography.bodySmall,
             color = if (isolatedProfile) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
@@ -66,7 +71,7 @@ fun DesktopScreen(
             onClick = onExit,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-        ) { Text("Wyjdź i zniszcz świat") }
+        ) { Text(if (amnesia) "Wyjdź i zniszcz świat" else "Wyjdź") }
     }
 }
 
