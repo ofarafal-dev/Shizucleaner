@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ShizuCleaner"
+rootProject.name = "Enklawa"
 include(":app")

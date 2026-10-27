@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.ofarafal.shizucleaner"
+    namespace = "dev.ofarafal.enklawa"
     compileSdk = 35
 
     // CI podaje numer builda jako versionCode (-PappVersionCode=N); lokalnie 1.
@@ -13,11 +13,11 @@ android {
     val appVersionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
 
     defaultConfig {
-        applicationId = "dev.ofarafal.shizucleaner"
+        applicationId = "dev.ofarafal.enklawa"
         minSdk = 26
         targetSdk = 35
         versionCode = appVersionCode
-        versionName = "0.3.$appVersionCode"
+        versionName = "0.1.$appVersionCode"
     }
 
     // Stały klucz z sekretów CI. Bez niego (build lokalny) release podpisuje się kluczem debug,
@@ -52,16 +52,11 @@ android {
 
     buildFeatures {
         compose = true
-        aidl = true
         buildConfig = true
     }
 }
 
 dependencies {
-    val shizuku = "13.1.5"
-    implementation("dev.rikka.shizuku:api:$shizuku")
-    implementation("dev.rikka.shizuku:provider:$shizuku")
-
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
@@ -70,7 +65,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.webkit:webkit:1.12.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     testImplementation("junit:junit:4.13.2")
+    // android.jar w testach JVM ma tylko atrapy org.json; prawdziwa implementacja do testu parsera wydań.
+    testImplementation("org.json:json:20240303")
 }

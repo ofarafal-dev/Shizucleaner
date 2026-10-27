@@ -63,8 +63,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/release/app-release.apk ShizuCleaner.apk
-          gh release create "v${{ github.run_number }}" ShizuCleaner.apk \
-            --title "0.3.${{ github.run_number }}" \
+          cp app/build/outputs/apk/release/app-release.apk Enklawa.apk
+          gh release create "v${{ github.run_number }}" Enklawa.apk \
+            --title "0.1.${{ github.run_number }}" \
             --notes "Build ${{ github.run_number }}, commit ${GITHUB_SHA::7}. ${{ steps.tests.outputs.summary }}" \
             --latest
