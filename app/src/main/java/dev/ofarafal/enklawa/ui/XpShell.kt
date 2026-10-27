@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package dev.ofarafal.enklawa.ui
 
 import android.content.Context
@@ -8,6 +10,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -91,6 +99,9 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
     var wm by remember { mutableStateOf(WindowsState()) }
     var startOpen by remember { mutableStateOf(false) }
     var confirmExit by remember { mutableStateOf(false) }
+    var desktopIds by remember { mutableStateOf(DesktopIconIds) }
+    var desktopMenu by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
 
     BackHandler(enabled = startOpen) { startOpen = false }
     BackHandler(enabled = !startOpen && wm.activeId != null) {
@@ -121,14 +132,28 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
                 }
             }
 
-            Wallpaper()
+            Wallpaper(
+                Modifier.fillMaxSize().pointerInput(Unit) {
+                    detectTapGestures(onLongPress = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        desktopMenu = true
+                    })
+                },
+            )
+            Box(Modifier.padding(start = 12.dp, top = 40.dp)) {
+                DropdownMenu(expanded = desktopMenu, onDismissRequest = { desktopMenu = false }) {
+                    DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { desktopMenu = false; open("settings") })
+                    DropdownMenuItem(text = { Text("Przywróć ikony pulpitu") }, onClick = { desktopMenu = false; desktopIds = DesktopIconIds })
+                    DropdownMenuItem(text = { Text("Wyłącz świat") }, onClick = { desktopMenu = false; turnOff() })
+                }
+            }
 
             Column(
                 Modifier.padding(start = 10.dp, top = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                DesktopIconIds.mapNotNull { appById(it) }.forEach { app ->
-                    DesktopIcon(app) { open(app.id) }
+                desktopIds.mapNotNull { appById(it) }.forEach { app ->
+                    DesktopIcon(app, onClick = { open(app.id) }, onRemove = { desktopIds = desktopIds - app.id })
                 }
             }
 
@@ -156,6 +181,7 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
                 StartMenu(
                     amnesia = amnesia,
                     vaultName = vaultName,
+                    onAddToDesktop = { id -> if (id !in desktopIds) desktopIds = desktopIds + id },
                     onLaunch = open,
                     onTurnOff = turnOff,
                     onDismiss = { startOpen = false },
@@ -168,6 +194,10 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
             amnesia = amnesia || vaultName != null,
             onStart = { startOpen = !startOpen },
             onWindow = { id -> startOpen = false; wm = WindowLogic.taskbarClick(wm, id) },
+            onMinimize = { id -> wm = WindowLogic.minimize(wm, id) },
+            onClose = { id -> wm = WindowLogic.close(wm, id) },
+            onOpenApp = open,
+            onTurnOff = turnOff,
         )
     }
 
@@ -204,23 +234,36 @@ private fun IconBox(app: AppDef, size: Dp, dim: Boolean = false) {
 }
 
 @Composable
-private fun DesktopIcon(app: AppDef, onClick: () -> Unit) {
-    Column(
-        Modifier
-            .width(76.dp)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        IconBox(app, 48.dp)
-        Text(
-            app.title,
-            color = Color.White,
-            fontSize = 11.sp,
-            maxLines = 2,
-            textAlign = TextAlign.Center,
-            style = LabelShadow,
-            modifier = Modifier.padding(top = 4.dp),
-        )
+private fun DesktopIcon(app: AppDef, onClick: () -> Unit, onRemove: () -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    Box {
+        Column(
+            Modifier
+                .width(76.dp)
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick,
+                    onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true },
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            IconBox(app, 48.dp)
+            Text(
+                app.title,
+                color = Color.White,
+                fontSize = 11.sp,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+                style = LabelShadow,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text("Otwórz") }, onClick = { menu = false; onClick() })
+            DropdownMenuItem(text = { Text("Usuń z pulpitu") }, onClick = { menu = false; onRemove() })
+        }
     }
 }
 
@@ -378,7 +421,18 @@ private fun rememberBattery(): Pair<Int, Boolean> {
 }
 
 @Composable
-private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onWindow: (Int) -> Unit) {
+private fun Taskbar(
+    wm: WindowsState,
+    amnesia: Boolean,
+    onStart: () -> Unit,
+    onWindow: (Int) -> Unit,
+    onMinimize: (Int) -> Unit,
+    onClose: (Int) -> Unit,
+    onOpenApp: (String) -> Unit,
+    onTurnOff: () -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    var startMenu by remember { mutableStateOf(false) }
     val now = rememberNow()
     val (level, charging) = rememberBattery()
     val dock = RoundedCornerShape(26.dp)
@@ -393,14 +447,24 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
                 .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Brush.linearGradient(Xp.StartGreen))
-                    .clickable(onClick = onStart),
-                contentAlignment = Alignment.Center,
-            ) { GlyphIcon(Glyph.Logo, Modifier.size(24.dp), tint = Color(0xFF06231E)) }
+            Box {
+                Box(
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(Xp.StartGreen))
+                        .combinedClickable(
+                            onClick = onStart,
+                            onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); startMenu = true },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) { GlyphIcon(Glyph.Logo, Modifier.size(24.dp), tint = Color(0xFF06231E)) }
+                DropdownMenu(expanded = startMenu, onDismissRequest = { startMenu = false }) {
+                    DropdownMenuItem(text = { Text("Ustawienia") }, onClick = { startMenu = false; onOpenApp("settings") })
+                    DropdownMenuItem(text = { Text("Ten świat") }, onClick = { startMenu = false; onOpenApp("computer") })
+                    DropdownMenuItem(text = { Text("Wyłącz świat") }, onClick = { startMenu = false; onTurnOff() })
+                }
+            }
 
             Row(
                 Modifier.weight(1f).padding(horizontal = 8.dp).horizontalScroll(rememberScrollState()),
@@ -410,6 +474,8 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
                     val app = appById(win.appId)
                     val current = wm.activeId == win.id && !win.minimized
                     val shape = RoundedCornerShape(18.dp)
+                    var winMenu by remember(win.id) { mutableStateOf(false) }
+                    Box {
                     Row(
                         Modifier
                             .width(112.dp)
@@ -417,7 +483,10 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
                             .clip(shape)
                             .background(if (current) Color(0x337FDBCA) else Color(0x14FFFFFF))
                             .border(1.dp, if (current) Xp.Accent.copy(alpha = 0.7f) else Color.Transparent, shape)
-                            .clickable { onWindow(win.id) }
+                            .combinedClickable(
+                                onClick = { onWindow(win.id) },
+                                onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); winMenu = true },
+                            )
                             .padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -430,6 +499,17 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(start = 6.dp),
                         )
+                    }
+                    DropdownMenu(expanded = winMenu, onDismissRequest = { winMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(if (win.minimized) "Przywróć" else "Pokaż") },
+                            onClick = { winMenu = false; if (win.minimized || !current) onWindow(win.id) },
+                        )
+                        if (!win.minimized) {
+                            DropdownMenuItem(text = { Text("Minimalizuj") }, onClick = { winMenu = false; onMinimize(win.id) })
+                        }
+                        DropdownMenuItem(text = { Text("Zamknij") }, onClick = { winMenu = false; onClose(win.id) })
+                    }
                     }
                 }
             }
@@ -453,7 +533,7 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
 /* ---------- menu Start ---------- */
 
 @Composable
-private fun StartMenu(amnesia: Boolean, vaultName: String?, onLaunch: (String) -> Unit, onTurnOff: () -> Unit, onDismiss: () -> Unit) {
+private fun StartMenu(amnesia: Boolean, vaultName: String?, onAddToDesktop: (String) -> Unit, onLaunch: (String) -> Unit, onTurnOff: () -> Unit, onDismiss: () -> Unit) {
     var allPrograms by remember { mutableStateOf(false) }
     val noRipple = remember { MutableInteractionSource() }
     val menuShape = RoundedCornerShape(20.dp)
@@ -507,11 +587,11 @@ private fun StartMenu(amnesia: Boolean, vaultName: String?, onLaunch: (String) -
                         if (allPrograms) {
                             MenuLine("◂ Wstecz", null, bold = true, color = Xp.Link) { allPrograms = false }
                             AppRegistry.forEach { app ->
-                                MenuLine(app.title, app, enabled = app.available) { onLaunch(app.id) }
+                                MenuLine(app.title, app, enabled = app.available, onAddToDesktop = { onAddToDesktop(app.id) }) { onLaunch(app.id) }
                             }
                         } else {
                             PinnedIds.mapNotNull { appById(it) }.forEach { app ->
-                                MenuLine(app.title, app, bold = true, enabled = app.available) { onLaunch(app.id) }
+                                MenuLine(app.title, app, bold = true, enabled = app.available, onAddToDesktop = { onAddToDesktop(app.id) }) { onLaunch(app.id) }
                             }
                         }
                     }
@@ -573,26 +653,40 @@ private fun MenuLine(
     color: Color = Color(0xFFE4E8EC),
     small: Boolean = false,
     enabled: Boolean = true,
+    onAddToDesktop: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = if (small) 7.dp else 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (app != null) {
-            IconBox(app, if (small) 24.dp else 30.dp, dim = !enabled)
-            Spacer(Modifier.width(8.dp))
+    var menu by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+    Box {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (onAddToDesktop != null && enabled) {
+                        { haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true }
+                    } else null,
+                )
+                .padding(horizontal = 10.dp, vertical = if (small) 7.dp else 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (app != null) {
+                IconBox(app, if (small) 24.dp else 30.dp, dim = !enabled)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                title,
+                color = if (enabled) color else Color(0xFF8A8A8A),
+                fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+                fontSize = if (small) 12.sp else 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        Text(
-            title,
-            color = if (enabled) color else Color(0xFF8A8A8A),
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            fontSize = if (small) 12.sp else 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text("Otwórz") }, onClick = { menu = false; onClick() })
+            DropdownMenuItem(text = { Text("Dodaj do pulpitu") }, onClick = { menu = false; onAddToDesktop?.invoke() })
+        }
     }
 }
