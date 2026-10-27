@@ -1,7 +1,10 @@
 package dev.ofarafal.enklawa.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import dev.ofarafal.enklawa.Prefs
@@ -32,6 +39,11 @@ fun EntryScreen(onEnter: (amnesia: Boolean) -> Unit) {
     val ctx = LocalContext.current
     var amnesia by remember { mutableStateOf(false) } // domyślnie wyłączona
 
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF00309C), Color(0xFF3A6BD6), Color(0xFF00309C)))),
+    ) {
     Column(
         Modifier
             .fillMaxSize()
@@ -41,7 +53,17 @@ fun EntryScreen(onEnter: (amnesia: Boolean) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Spacer(Modifier.height(24.dp))
-        Text("Enklawa", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GlyphIcon(Glyph.Logo, Modifier.size(52.dp))
+            Text(
+                "Enklawa",
+                style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.padding(start = 12.dp),
+            )
+        }
         Text(
             "Osobny świat w aplikacji. Wchodzisz, masz własny pulpit i przeglądarkę; wychodzisz i wracasz do zwykłego telefonu.",
             style = MaterialTheme.typography.bodyLarge,
@@ -76,10 +98,11 @@ fun EntryScreen(onEnter: (amnesia: Boolean) -> Unit) {
                 "• Adresy, które odwiedzasz, widzi Twoja sieć i odwiedzane strony. Tor będzie w kolejnej wersji.\n" +
                 "• Nadpisywanie danych na pamięci flash nie daje gwarancji, dlatego opieramy się na zniszczeniu klucza.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Color.White.copy(alpha = 0.85f),
         )
 
         Spacer(Modifier.height(8.dp))
         UpdatePanel(autoCheck = Prefs.autoUpdateCheck(ctx), modifier = Modifier.fillMaxWidth())
+    }
     }
 }

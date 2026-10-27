@@ -6,11 +6,12 @@ import android.os.Process
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,24 +20,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import dev.ofarafal.enklawa.browser.BrowserProfile
 import dev.ofarafal.enklawa.session.WorldSession
-import dev.ofarafal.enklawa.ui.BrowserScreen
-import dev.ofarafal.enklawa.ui.DesktopScreen
 import dev.ofarafal.enklawa.ui.EnklawaTheme
 import dev.ofarafal.enklawa.ui.EntryScreen
-import dev.ofarafal.enklawa.ui.SettingsScreen
-
-private enum class Screen { Desktop, Browser, Settings }
+import dev.ofarafal.enklawa.ui.Glyph
+import dev.ofarafal.enklawa.ui.GlyphIcon
+import dev.ofarafal.enklawa.ui.XpShell
 
 class MainActivity : ComponentActivity() {
 
     private var session by mutableStateOf<WorldSession?>(null)
     private var profile by mutableStateOf<BrowserProfile?>(null)
-    private var screen by mutableStateOf(Screen.Desktop)
     private var ending by mutableStateOf(false)
     private var amnesia by mutableStateOf(false)
 
@@ -59,23 +63,9 @@ class MainActivity : ComponentActivity() {
                     val s = session
                     val p = profile
                     when {
-                        ending -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Niszczenie świata…")
-                        }
+                        ending -> ShutdownScreen()
                         s == null || p == null -> EntryScreen(onEnter = ::enterWorld)
-                        else -> Crossfade(targetState = screen, animationSpec = tween(260), label = "screen") { sc ->
-                            when (sc) {
-                                Screen.Browser -> BrowserScreen(p, onClose = { screen = Screen.Desktop })
-                                Screen.Settings -> SettingsScreen(amnesia = amnesia, onBack = { screen = Screen.Desktop })
-                                Screen.Desktop -> DesktopScreen(
-                                    isolatedProfile = p.isolated,
-                                    amnesia = amnesia,
-                                    onOpenBrowser = { screen = Screen.Browser },
-                                    onOpenSettings = { screen = Screen.Settings },
-                                    onExit = ::exitWorld,
-                                )
-                            }
-                        }
+                        else -> XpShell(amnesia = amnesia, profile = p, vault = s.vault, onExit = ::exitWorld)
                     }
                 }
             }
@@ -91,11 +81,10 @@ class MainActivity : ComponentActivity() {
         s.onEnd { p.destroy() }
         session = s
         profile = p
-        screen = Screen.Desktop
     }
 
     /**
-     * Wyjście: usuwamy UI przeglądarki (niszczy WebView), po krótkiej chwili kończymy sesję
+     * Wyjście: usuwamy UI (niszczy WebView), po krótkiej chwili kończymy sesję
      * (profil, klucz, pliki), zamykamy zadanie i zabijamy proces. Gdyby deleteProfile się nie udało,
      * pozostałość usunie sweepLeftovers przy następnym wejściu.
      */
@@ -104,17 +93,36 @@ class MainActivity : ComponentActivity() {
         ending = true
         session = null
         profile = null
-        screen = Screen.Desktop
         window.decorView.postDelayed({
             s.end()
             finishAndRemoveTask()
             Process.killProcess(Process.myPid())
-        }, 400)
+        }, 500)
     }
 
     override fun onDestroy() {
         // Zamknięcie aktywności bez przycisku (np. przesunięcie z ekranu) też kończy świat.
         if (isFinishing) session?.end()
         super.onDestroy()
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun ShutdownScreen() {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF00309C), Color(0xFF3A6BD6), Color(0xFF00309C)))),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            GlyphIcon(Glyph.Logo, Modifier.size(72.dp))
+            Text(
+                "Zamykanie świata…",
+                color = Color.White, fontSize = 22.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 16.dp),
+            )
+            Text("Niszczenie klucza sesji", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+        }
     }
 }

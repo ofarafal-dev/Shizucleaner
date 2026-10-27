@@ -1,0 +1,611 @@
+package dev.ofarafal.enklawa.ui
+
+import android.content.Context
+import android.os.BatteryManager
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dev.ofarafal.enklawa.browser.BrowserProfile
+import dev.ofarafal.enklawa.crypto.SessionVault
+import dev.ofarafal.enklawa.os.Win
+import dev.ofarafal.enklawa.os.WindowLogic
+import dev.ofarafal.enklawa.os.WindowsState
+import kotlinx.coroutines.delay
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
+
+private val DesktopIconIds = listOf("computer", "browser", "notepad", "explorer")
+private val PinnedIds = listOf("browser", "notepad", "explorer", "tor", "chat")
+private val RightIds = listOf("computer", "explorer", "settings")
+private val LabelShadow = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.8f), Offset(1.5f, 1.5f), 3f))
+
+/**
+ * Powłoka systemu w stylu Luna: pulpit z ikonami, okna z paskiem tytułu, pasek zadań z przyciskiem start,
+ * menu Start i zasobnik. Okna otwierają się zmaksymalizowane (to telefon); przycisk w pasku tytułu je przywraca.
+ */
+@Composable
+fun XpShell(amnesia: Boolean, profile: BrowserProfile, vault: SessionVault, onExit: () -> Unit) {
+    val ctx = LocalContext.current
+    var wm by remember { mutableStateOf(WindowsState()) }
+    var startOpen by remember { mutableStateOf(false) }
+    var confirmExit by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = startOpen) { startOpen = false }
+    BackHandler(enabled = !startOpen && wm.activeId != null) {
+        wm.activeId?.let { wm = WindowLogic.close(wm, it) }
+    }
+
+    val turnOff: () -> Unit = {
+        startOpen = false
+        if (amnesia) {
+            confirmExit = true
+        } else {
+            onExit()
+        }
+    }
+
+    Column(Modifier.fillMaxSize().background(Color.Black).safeDrawingPadding()) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val areaW = maxWidth.value
+            val areaH = maxHeight.value
+
+            val open: (String) -> Unit = { id ->
+                startOpen = false
+                val app = appById(id)
+                when {
+                    app == null -> Unit
+                    !app.available -> Toast.makeText(ctx, "${app.title} — w kolejnych wersjach", Toast.LENGTH_SHORT).show()
+                    else -> wm = WindowLogic.open(wm, app.id, app.title, app.singleton, areaW, areaH)
+                }
+            }
+
+            Wallpaper()
+
+            Column(
+                Modifier.padding(start = 10.dp, top = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                DesktopIconIds.mapNotNull { appById(it) }.forEach { app ->
+                    DesktopIcon(app) { open(app.id) }
+                }
+            }
+
+            wm.windows.forEach { win ->
+                key(win.id) {
+                    val app = appById(win.appId)
+                    if (app != null) {
+                        val active = wm.activeId == win.id
+                        XpWindow(
+                            win = win,
+                            app = app,
+                            active = active,
+                            env = AppEnv(amnesia, profile, vault, active && !win.minimized, open),
+                            onFocus = { if (wm.activeId != win.id) wm = WindowLogic.focus(wm, win.id) },
+                            onMinimize = { wm = WindowLogic.minimize(wm, win.id) },
+                            onMaximize = { wm = WindowLogic.toggleMaximize(wm, win.id) },
+                            onClose = { wm = WindowLogic.close(wm, win.id) },
+                            onDrag = { dx, dy -> wm = WindowLogic.move(wm, win.id, dx, dy, areaW, areaH) },
+                        )
+                    }
+                }
+            }
+
+            if (startOpen) {
+                StartMenu(
+                    amnesia = amnesia,
+                    onLaunch = open,
+                    onTurnOff = turnOff,
+                    onDismiss = { startOpen = false },
+                )
+            }
+        }
+
+        Taskbar(
+            wm = wm,
+            amnesia = amnesia,
+            onStart = { startOpen = !startOpen },
+            onWindow = { id -> startOpen = false; wm = WindowLogic.taskbarClick(wm, id) },
+        )
+    }
+
+    if (confirmExit) {
+        AlertDialog(
+            onDismissRequest = { confirmExit = false },
+            title = { Text("Wyłączyć świat?") },
+            text = { Text("Klucz sesji zniknie, pliki i profil przeglądarki zostaną skasowane, aplikacja się zamknie.") },
+            confirmButton = {
+                TextButton(onClick = { confirmExit = false; onExit() }) {
+                    Text("Wyłącz", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmExit = false }) { Text("Anuluj") } },
+        )
+    }
+}
+
+/* ---------- ikony ---------- */
+
+@Composable
+private fun IconBox(app: AppDef, size: Dp, dim: Boolean = false) {
+    val shape = RoundedCornerShape(size * 0.26f)
+    Box(
+        Modifier
+            .size(size)
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(app.top, app.bottom)))
+            .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.05f))), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        GlyphIcon(app.glyph, Modifier.size(size * 0.62f), tint = Color.White.copy(alpha = if (dim) 0.55f else 1f))
+    }
+}
+
+@Composable
+private fun DesktopIcon(app: AppDef, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(76.dp)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IconBox(app, 48.dp)
+        Text(
+            app.title,
+            color = Color.White,
+            fontSize = 11.sp,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+            style = LabelShadow,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+}
+
+/* ---------- okno ---------- */
+
+@Composable
+private fun XpWindow(
+    win: Win,
+    app: AppDef,
+    active: Boolean,
+    env: AppEnv,
+    onFocus: () -> Unit,
+    onMinimize: () -> Unit,
+    onMaximize: () -> Unit,
+    onClose: () -> Unit,
+    onDrag: (Float, Float) -> Unit,
+) {
+    val density = LocalDensity.current.density
+    val focus = rememberUpdatedState(onFocus)
+    val drag = rememberUpdatedState(onDrag)
+
+    val geometry = if (win.maximized) {
+        Modifier.fillMaxSize()
+    } else {
+        Modifier
+            .offset { IntOffset((win.x * density).roundToInt(), (win.y * density).roundToInt()) }
+            .size(win.w.dp, win.h.dp)
+    }
+    // Zminimalizowane okno zostaje w kompozycji (żeby np. strona w przeglądarce nie zginęła), ale poza ekranem.
+    val hidden = if (win.minimized) Modifier.offset(x = 6000.dp) else Modifier
+    val shape = RoundedCornerShape(topStart = 9.dp, topEnd = 9.dp)
+
+    Column(
+        hidden
+            .then(geometry)
+            .clip(shape)
+            .background(if (active) Xp.Frame else Xp.FrameInactive)
+            .pointerInput(Unit) {
+                // Obserwujemy dotknięcie bez konsumowania, żeby okno wyszło na wierzch.
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.changedToDown() }) focus.value()
+                    }
+                }
+            },
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .background(Brush.verticalGradient(if (active) Xp.TitleActive else Xp.TitleInactive))
+                .pointerInput(win.maximized) {
+                    if (!win.maximized) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            drag.value(dragAmount.x / this.density, dragAmount.y / this.density)
+                        }
+                    }
+                }
+                .padding(start = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GlyphIcon(app.glyph, Modifier.size(18.dp))
+            Text(
+                win.title,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = LabelShadow,
+                modifier = Modifier.weight(1f).padding(start = 6.dp),
+            )
+            CaptionButton(CaptionKind.Minimize, onMinimize)
+            CaptionButton(if (win.maximized) CaptionKind.Restore else CaptionKind.Maximize, onMaximize)
+            CaptionButton(CaptionKind.Close, onClose)
+        }
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(start = 3.dp, end = 3.dp, bottom = 3.dp)
+                .background(Xp.Body),
+        ) {
+            XpLightTheme {
+                Surface(Modifier.fillMaxSize(), color = Xp.Body) { app.content(env) }
+            }
+        }
+    }
+}
+
+private enum class CaptionKind { Minimize, Maximize, Restore, Close }
+
+@Composable
+private fun CaptionButton(kind: CaptionKind, onClick: () -> Unit) {
+    val colors = if (kind == CaptionKind.Close) {
+        listOf(Color(0xFFE9886A), Color(0xFFD1491E))
+    } else {
+        listOf(Color(0xFF6FA4F7), Color(0xFF2A63DC))
+    }
+    val shape = RoundedCornerShape(5.dp)
+    Box(
+        Modifier
+            .padding(end = 4.dp)
+            .size(24.dp)
+            .clip(shape)
+            .background(Brush.verticalGradient(colors))
+            .border(1.dp, Color.White.copy(alpha = 0.85f), shape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(12.dp)) {
+            val s = size.minDimension
+            val t = 2.2.dp.toPx()
+            when (kind) {
+                CaptionKind.Minimize -> drawLine(Color.White, Offset(s * 0.1f, s * 0.9f), Offset(s * 0.7f, s * 0.9f), strokeWidth = t)
+                CaptionKind.Maximize -> {
+                    drawRect(Color.White, Offset(t / 2, t / 2), androidx.compose.ui.geometry.Size(s - t, s - t), style = Stroke(t))
+                    drawLine(Color.White, Offset(0f, t / 2), Offset(s, t / 2), strokeWidth = t * 1.4f)
+                }
+                CaptionKind.Restore -> {
+                    drawRect(Color.White, Offset(s * 0.3f, t / 2), androidx.compose.ui.geometry.Size(s * 0.7f - t / 2, s * 0.65f), style = Stroke(t * 0.8f))
+                    drawRect(Color.White, Offset(t / 2, s * 0.3f), androidx.compose.ui.geometry.Size(s * 0.7f - t / 2, s * 0.65f), style = Stroke(t * 0.8f))
+                }
+                CaptionKind.Close -> {
+                    drawLine(Color.White, Offset(s * 0.1f, s * 0.1f), Offset(s * 0.9f, s * 0.9f), strokeWidth = t)
+                    drawLine(Color.White, Offset(s * 0.9f, s * 0.1f), Offset(s * 0.1f, s * 0.9f), strokeWidth = t)
+                }
+            }
+        }
+    }
+}
+
+/* ---------- pasek zadań ---------- */
+
+@Composable
+private fun rememberNow(): LocalDateTime {
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = LocalDateTime.now()
+            delay(10_000)
+        }
+    }
+    return now
+}
+
+@Composable
+private fun rememberBattery(): Pair<Int, Boolean> {
+    val ctx = LocalContext.current
+    var state by remember { mutableStateOf(0 to false) }
+    LaunchedEffect(Unit) {
+        val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        while (true) {
+            state = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) to bm.isCharging
+            delay(30_000)
+        }
+    }
+    return state
+}
+
+@Composable
+private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onWindow: (Int) -> Unit) {
+    val now = rememberNow()
+    val (level, charging) = rememberBattery()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .background(Brush.verticalGradient(Xp.Taskbar)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            Modifier
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp))
+                .background(Brush.verticalGradient(Xp.StartGreen))
+                .clickable(onClick = onStart)
+                .padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GlyphIcon(Glyph.Logo, Modifier.size(22.dp))
+            Text(
+                "start",
+                color = Color.White,
+                fontStyle = FontStyle.Italic,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 20.sp,
+                style = LabelShadow,
+                modifier = Modifier.padding(start = 6.dp),
+            )
+        }
+
+        Row(
+            Modifier.weight(1f).padding(horizontal = 6.dp).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            wm.windows.forEach { win ->
+                val app = appById(win.appId)
+                val current = wm.activeId == win.id && !win.minimized
+                val shape = RoundedCornerShape(5.dp)
+                Row(
+                    Modifier
+                        .width(112.dp)
+                        .height(34.dp)
+                        .clip(shape)
+                        .background(if (current) Color(0xFF1E3FA8) else Color(0xFF3C81F3))
+                        .border(1.dp, if (current) Color(0xFF0B2570) else Color(0xFF8DB6F8), shape)
+                        .clickable { onWindow(win.id) }
+                        .padding(horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (app != null) GlyphIcon(app.glyph, Modifier.size(16.dp))
+                    Text(
+                        win.title,
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 5.dp),
+                    )
+                }
+            }
+        }
+
+        Row(
+            Modifier
+                .fillMaxHeight()
+                .background(Brush.verticalGradient(Xp.Tray))
+                .padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            GlyphIcon(Glyph.Lock, Modifier.size(16.dp), tint = if (amnesia) Color(0xFF9FFFE0) else Color.White.copy(alpha = 0.7f))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text((if (charging) "⚡" else "") + "$level%", color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+/* ---------- menu Start ---------- */
+
+@Composable
+private fun StartMenu(amnesia: Boolean, onLaunch: (String) -> Unit, onTurnOff: () -> Unit, onDismiss: () -> Unit) {
+    var allPrograms by remember { mutableStateOf(false) }
+    val noRipple = remember { MutableInteractionSource() }
+    val menuShape = RoundedCornerShape(topStart = 9.dp, topEnd = 9.dp)
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
+    ) {
+        Column(
+            Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth(0.95f)
+                .widthIn(max = 350.dp)
+                .clip(menuShape)
+                .background(Xp.Frame)
+                .padding(2.dp)
+                .clickable(interactionSource = noRipple, indication = null, onClick = {}),
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                    .background(Brush.horizontalGradient(Xp.MenuHeader))
+                    .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val avatar = RoundedCornerShape(7.dp)
+                Box(
+                    Modifier
+                        .size(42.dp)
+                        .clip(avatar)
+                        .background(Brush.verticalGradient(listOf(Color(0xFF9AD0FF), Color(0xFF2F6BD6))))
+                        .border(2.dp, Color.White, avatar),
+                    contentAlignment = Alignment.Center,
+                ) { GlyphIcon(Glyph.Logo, Modifier.size(28.dp)) }
+                Text(
+                    if (amnesia) "Świat tymczasowy" else "Świat zwykły",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    style = LabelShadow,
+                    modifier = Modifier.padding(start = 10.dp),
+                )
+            }
+
+            Row(Modifier.fillMaxWidth().height(330.dp)) {
+                Column(Modifier.weight(1.15f).fillMaxHeight().background(Color.White).padding(vertical = 6.dp)) {
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        if (allPrograms) {
+                            MenuLine("◂ Wstecz", null, bold = true, color = Xp.Link) { allPrograms = false }
+                            AppRegistry.forEach { app ->
+                                MenuLine(app.title, app, enabled = app.available) { onLaunch(app.id) }
+                            }
+                        } else {
+                            PinnedIds.mapNotNull { appById(it) }.forEach { app ->
+                                MenuLine(app.title, app, bold = true, enabled = app.available) { onLaunch(app.id) }
+                            }
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD6D6D6)))
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { allPrograms = !allPrograms }
+                            .padding(horizontal = 10.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Wszystkie programy", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black, modifier = Modifier.weight(1f))
+                        Box(
+                            Modifier.size(20.dp).clip(CircleShape).background(Color(0xFF3AA33A)),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("▸", color = Color.White, fontSize = 12.sp) }
+                    }
+                }
+                Column(Modifier.weight(0.85f).fillMaxHeight().background(Xp.MenuRight).padding(vertical = 6.dp)) {
+                    RightIds.mapNotNull { appById(it) }.forEach { app ->
+                        MenuLine(app.title, app, bold = true, color = Color(0xFF1E3A8A), small = true) { onLaunch(app.id) }
+                    }
+                }
+            }
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(bottomStart = 0.dp, bottomEnd = 0.dp))
+                    .background(Brush.horizontalGradient(Xp.MenuHeader))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = onTurnOff).padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val power = RoundedCornerShape(6.dp)
+                    Box(
+                        Modifier
+                            .size(28.dp)
+                            .clip(power)
+                            .background(Brush.verticalGradient(listOf(Color(0xFFEE8A70), Color(0xFFC8401A))))
+                            .border(1.dp, Color.White.copy(alpha = 0.8f), power),
+                        contentAlignment = Alignment.Center,
+                    ) { GlyphIcon(Glyph.Power, Modifier.size(18.dp)) }
+                    Text("Wyłącz", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MenuLine(
+    title: String,
+    app: AppDef?,
+    bold: Boolean = false,
+    color: Color = Color.Black,
+    small: Boolean = false,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = if (small) 7.dp else 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (app != null) {
+            IconBox(app, if (small) 24.dp else 30.dp, dim = !enabled)
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(
+            title,
+            color = if (enabled) color else Color(0xFF8A8A8A),
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            fontSize = if (small) 12.sp else 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}

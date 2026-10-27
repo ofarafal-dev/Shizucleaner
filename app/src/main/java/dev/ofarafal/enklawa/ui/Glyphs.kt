@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 
 /** Własne ikony rysowane w kodzie (bez zależności od pakietu material-icons). */
-enum class Glyph { Globe, Notes, Folder, Chat, Onion, Lock, Power, Grid, Back, Reload, Close, Settings }
+enum class Glyph { Globe, Notes, Folder, Chat, Onion, Lock, Power, Grid, Back, Reload, Close, Settings, Logo, Computer }
 
 @Composable
 fun GlyphIcon(glyph: Glyph, modifier: Modifier = Modifier, tint: Color = Color.White) {
@@ -139,6 +139,21 @@ fun GlyphIcon(glyph: Glyph, modifier: Modifier = Modifier, tint: Color = Color.W
                         strokeWidth = w * 1.2f, cap = StrokeCap.Round,
                     )
                 }
+            }
+
+            Glyph.Logo -> {
+                val c = Offset(s / 2, s / 2)
+                drawCircle(tint, s * 0.36f, c, style = Stroke(width = s * 0.12f, cap = StrokeCap.Round))
+                drawCircle(tint.copy(alpha = 0.95f), s * 0.15f, c)
+            }
+
+            Glyph.Computer -> {
+                drawRoundRect(
+                    tint, Offset(s * 0.15f, s * 0.2f), Size(s * 0.7f, s * 0.46f),
+                    CornerRadius(s * 0.06f), style = line,
+                )
+                drawLine(tint, Offset(s * 0.5f, s * 0.66f), Offset(s * 0.5f, s * 0.78f), strokeWidth = w, cap = StrokeCap.Round)
+                drawLine(tint, Offset(s * 0.32f, s * 0.8f), Offset(s * 0.68f, s * 0.8f), strokeWidth = w, cap = StrokeCap.Round)
             }
 
             Glyph.Close -> {

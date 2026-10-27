@@ -13,28 +13,17 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import androidx.activity.compose.BackHandler
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,54 +33,41 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import dev.ofarafal.enklawa.browser.BrowserProfile
 import dev.ofarafal.enklawa.browser.SecureWebView
 import dev.ofarafal.enklawa.browser.UrlInput
 
 @Composable
-fun BrowserScreen(profile: BrowserProfile, onClose: () -> Unit) {
+fun BrowserApp(env: AppEnv) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
     var address by remember { mutableStateOf("") }
     var field by remember { mutableStateOf<EditText?>(null) }
 
-    BackHandler { if (canGoBack) webView?.goBack() else onClose() }
+    // Wstecz w historii strony tylko gdy to okno jest aktywne; inaczej back obsługuje powłoka.
+    BackHandler(enabled = env.active && canGoBack) { webView?.goBack() }
 
     val go = rememberUpdatedState {
-        val url = UrlInput.resolve(address)
-        webView?.loadUrl(url)
+        webView?.loadUrl(UrlInput.resolve(address))
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF05080D), Color(0xFF0A1822))))
-            .safeDrawingPadding()
-            .imePadding(),
-    ) {
+    Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp)
-                .clip(RoundedCornerShape(26.dp))
-                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.06f))))
-                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
-                .padding(horizontal = 6.dp, vertical = 4.dp),
+            Modifier.fillMaxWidth().background(Xp.Body).padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BarButton(Glyph.Back, enabled = canGoBack) { webView?.goBack() }
+            ToolButton(Glyph.Back, enabled = canGoBack) { webView?.goBack() }
             AddressField(
                 modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                 onTextChanged = { address = it },
                 onGo = { go.value() },
                 onReady = { field = it },
-                externalText = address,
             )
-            BarButton(Glyph.Reload) { webView?.reload() }
-            BarButton(Glyph.Close, tint = Color(0xFFFF8A80)) { onClose() }
+            ToolButton(Glyph.Reload) { webView?.reload() }
         }
         if (progress in 1..99) {
             LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
@@ -100,7 +76,7 @@ fun BrowserScreen(profile: BrowserProfile, onClose: () -> Unit) {
             modifier = Modifier.fillMaxWidth().weight(1f),
             factory = { ctx ->
                 SecureWebView(ctx).also { wv ->
-                    profile.attach(wv) // musi być przed pierwszym loadUrl
+                    env.profile.attach(wv) // musi być przed pierwszym loadUrl
                     wv.webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                             // Tylko http(s); intent:, market:, file: itp. nie wychodzą ze świata.
@@ -138,11 +114,20 @@ fun BrowserScreen(profile: BrowserProfile, onClose: () -> Unit) {
     }
 }
 
+@Composable
+private fun ToolButton(glyph: Glyph, enabled: Boolean = true, onClick: () -> Unit) {
+    Box(
+        Modifier.size(38.dp).clip(CircleShape).clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        GlyphIcon(glyph, Modifier.size(24.dp), tint = Xp.Link.copy(alpha = if (enabled) 1f else 0.3f))
+    }
+}
+
 /** Pole adresu jako EditText, bo tylko tak można ustawić IME_FLAG_NO_PERSONALIZED_LEARNING. */
 @Composable
 private fun AddressField(
     modifier: Modifier,
-    externalText: String,
     onTextChanged: (String) -> Unit,
     onGo: () -> Unit,
     onReady: (EditText) -> Unit,
@@ -159,14 +144,15 @@ private fun AddressField(
                 imeOptions = EditorInfo.IME_ACTION_GO or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
                 setSingleLine(true)
                 hint = "Adres lub szukaj"
-                setTextColor(AColor.WHITE)
-                textSize = 15f
-                setPadding(28, 22, 28, 22)
-                background = GradientDrawable().apply {
-                    cornerRadius = 80f
-                    setColor(0x26FFFFFF)
-                }
+                setTextColor(AColor.BLACK)
                 setHintTextColor(AColor.GRAY)
+                textSize = 14f
+                setPadding(24, 14, 24, 14)
+                background = GradientDrawable().apply {
+                    cornerRadius = 10f
+                    setColor(AColor.WHITE)
+                    setStroke(2, 0xFF7F9DB9.toInt())
+                }
                 setOnEditorActionListener { _, actionId, _ ->
                     if (actionId == EditorInfo.IME_ACTION_GO) {
                         goState.value(); true
@@ -183,17 +169,4 @@ private fun AddressField(
             }
         },
     )
-}
-
-@Composable
-private fun BarButton(glyph: Glyph, enabled: Boolean = true, tint: Color = Color.White, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        GlyphIcon(glyph, Modifier.size(24.dp), tint = tint.copy(alpha = if (enabled) 1f else 0.3f))
-    }
 }
