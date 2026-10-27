@@ -101,6 +101,7 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
     var confirmExit by remember { mutableStateOf(false) }
     var desktopIds by remember { mutableStateOf(DesktopIconIds) }
     var desktopMenu by remember { mutableStateOf(false) }
+    var pendingOpen by remember { mutableStateOf<String?>(null) }
     val haptic = LocalHapticFeedback.current
 
     BackHandler(enabled = startOpen) { startOpen = false }
@@ -130,6 +131,10 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
                     !app.available -> Toast.makeText(ctx, "${app.title} — w kolejnych wersjach", Toast.LENGTH_SHORT).show()
                     else -> wm = WindowLogic.open(wm, app.id, app.title, app.singleton, areaW, areaH)
                 }
+            }
+
+            LaunchedEffect(pendingOpen) {
+                pendingOpen?.let { id -> pendingOpen = null; open(id) }
             }
 
             Wallpaper(
@@ -196,7 +201,7 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
             onWindow = { id -> startOpen = false; wm = WindowLogic.taskbarClick(wm, id) },
             onMinimize = { id -> wm = WindowLogic.minimize(wm, id) },
             onClose = { id -> wm = WindowLogic.close(wm, id) },
-            onOpenApp = open,
+            onOpenApp = { id -> pendingOpen = id },
             onTurnOff = turnOff,
         )
     }
