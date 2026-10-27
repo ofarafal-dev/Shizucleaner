@@ -439,6 +439,7 @@ private fun Taskbar(wm: WindowsState, amnesia: Boolean, onStart: () -> Unit, onW
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                if (dev.ofarafal.enklawa.tor.TorManager.routingApplied) GlyphIcon(Glyph.Onion, Modifier.size(16.dp), tint = Color(0xFFC9B6FF))
                 GlyphIcon(Glyph.Lock, Modifier.size(16.dp), tint = if (amnesia) Color(0xFF9FFFE0) else Color.White.copy(alpha = 0.6f))
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
                     Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)

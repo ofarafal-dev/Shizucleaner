@@ -18,6 +18,8 @@ android {
         targetSdk = 35
         versionCode = appVersionCode
         versionName = "0.1.$appVersionCode"
+        // Tor (libtor.so) jest duży; telefon docelowy (S21) to arm64.
+        ndk { abiFilters += listOf("arm64-v8a") }
     }
 
     // Stały klucz z sekretów CI. Bez niego (build lokalny) release podpisuje się kluczem debug,
@@ -69,6 +71,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation("info.guardianproject:tor-android:0.4.9.14")
+    implementation("info.guardianproject:jtorctl:0.4.5.7")
 
     testImplementation("junit:junit:4.13.2")
     // android.jar w testach JVM ma tylko atrapy org.json; prawdziwa implementacja do testu parsera wydań.

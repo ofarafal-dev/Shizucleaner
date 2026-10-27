@@ -115,6 +115,7 @@ class MainActivity : ComponentActivity() {
         session = null
         profile = null
         window.decorView.postDelayed({
+            runCatching { dev.ofarafal.enklawa.tor.TorManager.shutdown(applicationContext) }
             s.end()
             finishAndRemoveTask()
             Process.killProcess(Process.myPid())

@@ -23,7 +23,8 @@ class SecureWebView(context: Context) : WebView(context) {
             @Suppress("DEPRECATION") setGeolocationEnabled(false)
             setSupportMultipleWindows(false)
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            safeBrowsingEnabled = true
+            // Safe Browsing pyta Google bezpośrednio (poza proxy), więc przy Torze go nie włączamy.
+            safeBrowsingEnabled = !dev.ofarafal.enklawa.tor.TorManager.routingWanted
         }
         CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
     }

@@ -38,7 +38,7 @@ val AppRegistry: List<AppDef> = listOf(
     AppDef("clock", "Zegar", Glyph.Clock, Color(0xFF9AD0FF), Color(0xFF2F6BD6), content = { ClockApp(it) }),
     AppDef("computer", "Ten świat", Glyph.Computer, Color(0xFFB7D3F2), Color(0xFF4A78B5), content = { ComputerApp(it) }),
     AppDef("settings", "Ustawienia", Glyph.Settings, Color(0xFF9FB4C7), Color(0xFF3B4C5E), content = { SettingsApp(it) }),
-    AppDef("tor", "Tor", Glyph.Onion, Color(0xFFA48BE0), Color(0xFF311B92), available = false),
+    AppDef("tor", "Tor", Glyph.Onion, Color(0xFFA48BE0), Color(0xFF311B92), content = { TorApp(it) }),
 )
 
 /** Aplikacje z rejestru albo strony otwarte jako aplikacje (id „web:<adres>”). */
