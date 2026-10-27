@@ -99,7 +99,7 @@ object Updater {
         withContext(Dispatchers.IO) {
             val dir = File(ctx.cacheDir, "updates").apply { mkdirs() }
             dir.listFiles()?.forEach { it.delete() }
-            val out = File(dir, "Enklawa-${info.versionCode}.apk")
+            val out = File(dir, "Microcosm-${info.versionCode}.apk")
 
             val conn = open(info.apkUrl)
             if (conn.responseCode != 200) error("Pobieranie nie powiodło się (kod ${conn.responseCode})")
@@ -162,6 +162,6 @@ object Updater {
             connectTimeout = 15_000
             readTimeout = 30_000
             instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "Enklawa/${BuildConfig.VERSION_NAME}")
+            setRequestProperty("User-Agent", "Microcosm/${BuildConfig.VERSION_NAME}")
         }
 }

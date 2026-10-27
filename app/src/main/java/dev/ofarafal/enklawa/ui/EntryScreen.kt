@@ -85,7 +85,7 @@ fun EntryScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlyphIcon(Glyph.Logo, Modifier.size(52.dp))
                 Text(
-                    "Enklawa",
+                    "Microcosm",
                     style = MaterialTheme.typography.displaySmall,
                     color = Color.White,
                     fontStyle = FontStyle.Italic,

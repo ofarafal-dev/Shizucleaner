@@ -82,7 +82,7 @@ fun SettingsApp(env: AppEnv) {
         }
 
         Section("O aplikacji") {
-            Text("Enklawa — osobny świat w aplikacji.", style = MaterialTheme.typography.bodyMedium)
+            Text("Microcosm — osobny świat w aplikacji.", style = MaterialTheme.typography.bodyMedium)
             Text(
                 "Zero analityki. Jedyne połączenie poza przeglądarką to sprawdzanie i pobieranie aktualizacji z GitHub Releases (suma SHA-256, podpis sprawdza Android).",
                 style = MaterialTheme.typography.bodySmall,

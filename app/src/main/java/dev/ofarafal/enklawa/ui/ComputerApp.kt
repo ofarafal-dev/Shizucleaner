@@ -39,7 +39,7 @@ fun ComputerApp(env: AppEnv) {
             Row2("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
             Row2("Android System WebView", webView)
         }
-        Group("Enklawa") {
+        Group("Microcosm") {
             Row2("Wersja", "${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})")
         }
     }
