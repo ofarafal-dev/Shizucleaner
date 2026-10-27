@@ -57,4 +57,11 @@ class UpdaterTest {
         assertFalse(Updater.shaMatches("abc124", "abc123"))
         assertTrue(Updater.shaMatches("cokolwiek", null))
     }
+
+    @Test
+    fun releasesUrlUsesStableRepositoryId() {
+        assertTrue(Updater.RELEASES_LATEST_URL.startsWith("https://api.github.com/repositories/"))
+        assertTrue(Updater.RELEASES_LATEST_URL.endsWith("/releases/latest"))
+        assertTrue(Updater.REPO_ID > 0)
+    }
 }

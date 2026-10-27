@@ -36,13 +36,15 @@ sealed interface CheckResult {
  */
 object Updater {
 
-    const val REPO = "ofarafal-dev/enklawa"
+    /** Stałe ID repozytorium na GitHubie: adres działa także po zmianie nazwy repo. */
+    const val REPO_ID = 1435751361
+    const val RELEASES_LATEST_URL = "https://api.github.com/repositories/$REPO_ID/releases/latest"
     const val ASSET_NAME = "Enklawa.apk"
     const val ACTION_INSTALL_STATUS = "dev.ofarafal.enklawa.INSTALL_STATUS"
 
     suspend fun check(): CheckResult = withContext(Dispatchers.IO) {
         try {
-            val conn = open("https://api.github.com/repos/$REPO/releases/latest")
+            val conn = open(RELEASES_LATEST_URL)
             conn.setRequestProperty("Accept", "application/vnd.github+json")
             when (val code = conn.responseCode) {
                 200 -> parse(conn.inputStream.bufferedReader().use { it.readText() }, BuildConfig.VERSION_CODE)
