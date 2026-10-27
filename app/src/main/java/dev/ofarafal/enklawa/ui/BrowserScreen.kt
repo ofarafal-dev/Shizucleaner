@@ -2,6 +2,7 @@ package dev.ofarafal.enklawa.ui
 
 import android.graphics.Bitmap
 import android.graphics.Color as AColor
+import android.graphics.drawable.GradientDrawable
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -12,6 +13,15 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,12 +65,24 @@ fun BrowserScreen(profile: BrowserProfile, onClose: () -> Unit) {
         webView?.loadUrl(url)
     }
 
-    Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF05080D), Color(0xFF0A1822))))
+            .safeDrawingPadding()
+            .imePadding(),
+    ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(26.dp))
+                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.06f))))
+                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
+                .padding(horizontal = 6.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onClose) { Text("‹ Pulpit") }
+            BarButton(Glyph.Back, enabled = canGoBack) { webView?.goBack() }
             AddressField(
                 modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                 onTextChanged = { address = it },
@@ -68,7 +90,8 @@ fun BrowserScreen(profile: BrowserProfile, onClose: () -> Unit) {
                 onReady = { field = it },
                 externalText = address,
             )
-            TextButton(onClick = { webView?.reload() }) { Text("⟳") }
+            BarButton(Glyph.Reload) { webView?.reload() }
+            BarButton(Glyph.Close, tint = Color(0xFFFF8A80)) { onClose() }
         }
         if (progress in 1..99) {
             LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
@@ -137,6 +160,12 @@ private fun AddressField(
                 setSingleLine(true)
                 hint = "Adres lub szukaj"
                 setTextColor(AColor.WHITE)
+                textSize = 15f
+                setPadding(28, 22, 28, 22)
+                background = GradientDrawable().apply {
+                    cornerRadius = 80f
+                    setColor(0x26FFFFFF)
+                }
                 setHintTextColor(AColor.GRAY)
                 setOnEditorActionListener { _, actionId, _ ->
                     if (actionId == EditorInfo.IME_ACTION_GO) {
@@ -154,4 +183,17 @@ private fun AddressField(
             }
         },
     )
+}
+
+@Composable
+private fun BarButton(glyph: Glyph, enabled: Boolean = true, tint: Color = Color.White, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        GlyphIcon(glyph, Modifier.size(24.dp), tint = tint.copy(alpha = if (enabled) 1f else 0.3f))
+    }
 }

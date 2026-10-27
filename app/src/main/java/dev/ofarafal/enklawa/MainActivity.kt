@@ -6,10 +6,13 @@ import android.os.Process
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             EnklawaTheme {
-                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     val s = session
                     val p = profile
                     when {
@@ -59,13 +62,18 @@ class MainActivity : ComponentActivity() {
                             Text("Niszczenie świata…")
                         }
                         s == null || p == null -> EntryScreen(onEnter = ::enterWorld)
-                        screen == Screen.Browser -> BrowserScreen(p, onClose = { screen = Screen.Desktop })
-                        else -> DesktopScreen(
-                            isolatedProfile = p.isolated,
-                            amnesia = amnesia,
-                            onOpenBrowser = { screen = Screen.Browser },
-                            onExit = ::exitWorld,
-                        )
+                        else -> Crossfade(targetState = screen, animationSpec = tween(260), label = "screen") { sc ->
+                            if (sc == Screen.Browser) {
+                                BrowserScreen(p, onClose = { screen = Screen.Desktop })
+                            } else {
+                                DesktopScreen(
+                                    isolatedProfile = p.isolated,
+                                    amnesia = amnesia,
+                                    onOpenBrowser = { screen = Screen.Browser },
+                                    onExit = ::exitWorld,
+                                )
+                            }
+                        }
                     }
                 }
             }
