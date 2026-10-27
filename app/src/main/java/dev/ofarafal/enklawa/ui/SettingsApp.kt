@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import dev.ofarafal.enklawa.Prefs
 import dev.ofarafal.enklawa.browser.BrowserProfile
 
-/** „Panel sterowania”: aktualizacje, prywatność, informacje o aplikacji. */
+/** „Ustawienia”: aktualizacje, prywatność, informacje o aplikacji. */
 @Composable
 fun SettingsApp(env: AppEnv) {
     val ctx = LocalContext.current

@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/** Eksplorator magazynu sesji: pokazuje nazwy plików świata (zawartość jest zaszyfrowana kluczem z RAM). */
+/** Pliki: magazyn sesji: pokazuje nazwy plików świata (zawartość jest zaszyfrowana kluczem z RAM). */
 @Composable
 fun ExplorerApp(env: AppEnv) {
     var tick by remember { mutableIntStateOf(0) }
@@ -50,7 +50,7 @@ fun ExplorerApp(env: AppEnv) {
                 .padding(6.dp),
         ) {
             if (names.isEmpty()) {
-                Text("Brak plików. Zapisz coś w Notatniku.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Brak plików. Zapisz coś w Notatkach.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             names.forEach { n ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 
 /** Własne ikony rysowane w kodzie (bez zależności od pakietu material-icons). */
-enum class Glyph { Globe, Notes, Folder, Chat, Onion, Lock, Power, Grid, Back, Reload, Close, Settings, Logo, Computer }
+enum class Glyph { Globe, Notes, Folder, Chat, Onion, Lock, Power, Grid, Back, Reload, Close, Settings, Logo, Computer, Calc, Clock, Apps }
 
 @Composable
 fun GlyphIcon(glyph: Glyph, modifier: Modifier = Modifier, tint: Color = Color.White) {
@@ -154,6 +154,30 @@ fun GlyphIcon(glyph: Glyph, modifier: Modifier = Modifier, tint: Color = Color.W
                 )
                 drawLine(tint, Offset(s * 0.5f, s * 0.66f), Offset(s * 0.5f, s * 0.78f), strokeWidth = w, cap = StrokeCap.Round)
                 drawLine(tint, Offset(s * 0.32f, s * 0.8f), Offset(s * 0.68f, s * 0.8f), strokeWidth = w, cap = StrokeCap.Round)
+            }
+
+            Glyph.Calc -> {
+                drawRoundRect(tint, Offset(s * 0.22f, s * 0.14f), Size(s * 0.56f, s * 0.72f), CornerRadius(s * 0.08f), style = line)
+                drawLine(tint, Offset(s * 0.32f, s * 0.3f), Offset(s * 0.68f, s * 0.3f), strokeWidth = w, cap = StrokeCap.Round)
+                for (row in 0..2) for (col in 0..2) {
+                    drawCircle(tint, s * 0.036f, Offset(s * (0.36f + col * 0.14f), s * (0.46f + row * 0.13f)))
+                }
+            }
+
+            Glyph.Clock -> {
+                val c = Offset(s / 2, s / 2)
+                drawCircle(tint, s * 0.36f, c, style = line)
+                drawLine(tint, c, Offset(c.x, c.y - s * 0.22f), strokeWidth = w, cap = StrokeCap.Round)
+                drawLine(tint, c, Offset(c.x + s * 0.15f, c.y + s * 0.08f), strokeWidth = w, cap = StrokeCap.Round)
+            }
+
+            Glyph.Apps -> {
+                for (row in 0..1) for (col in 0..1) {
+                    drawRoundRect(
+                        tint, Offset(s * (0.2f + col * 0.32f), s * (0.2f + row * 0.32f)), Size(s * 0.24f, s * 0.24f),
+                        CornerRadius(s * 0.05f), style = line,
+                    )
+                }
             }
 
             Glyph.Close -> {

@@ -76,8 +76,8 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
-private val DesktopIconIds = listOf("computer", "browser", "notepad", "explorer")
-private val PinnedIds = listOf("browser", "notepad", "explorer", "tor", "chat")
+private val DesktopIconIds = listOf("browser", "webapps", "notepad", "explorer", "calc", "clock")
+private val PinnedIds = listOf("browser", "webapps", "notepad", "explorer", "calc", "clock", "tor")
 private val RightIds = listOf("computer", "explorer", "settings")
 private val LabelShadow = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.8f), Offset(1.5f, 1.5f), 3f))
 

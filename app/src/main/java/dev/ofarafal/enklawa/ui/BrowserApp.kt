@@ -41,7 +41,7 @@ import dev.ofarafal.enklawa.browser.SecureWebView
 import dev.ofarafal.enklawa.browser.UrlInput
 
 @Composable
-fun BrowserApp(env: AppEnv) {
+fun BrowserApp(env: AppEnv, startUrl: String? = null) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     var progress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -100,7 +100,7 @@ fun BrowserApp(env: AppEnv) {
                         }
                     }
                     webView = wv
-                    wv.loadUrl("about:blank")
+                    wv.loadUrl(startUrl ?: "about:blank")
                 }
             },
             onRelease = { wv ->

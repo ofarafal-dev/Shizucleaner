@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.ofarafal.enklawa.BuildConfig
 
-/** „Mój komputer”: informacje o tym świecie i o urządzeniu gospodarza. */
+/** „Ten świat”: informacje o tym świecie i o urządzeniu gospodarza. */
 @Composable
 fun ComputerApp(env: AppEnv) {
     val webView = runCatching { WebView.getCurrentWebViewPackage()?.versionName }.getOrNull() ?: "nieznany"

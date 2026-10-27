@@ -23,7 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Notatnik zapisuje do zaszyfrowanego magazynu sesji (klucz w RAM). Pliki znikają razem ze światem. */
+/** Notatki zapisują do zaszyfrowanego magazynu sesji (klucz w RAM). Pliki znikają razem ze światem. */
 @Composable
 fun NotepadApp(env: AppEnv) {
     var text by remember { mutableStateOf("") }
