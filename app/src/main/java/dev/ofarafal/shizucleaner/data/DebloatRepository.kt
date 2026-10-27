@@ -1,13 +1,9 @@
 package dev.ofarafal.shizucleaner.data
 
 import android.content.Context
-import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
-import android.provider.Settings
-import android.provider.Telephony
-import android.telecom.TelecomManager
 import dev.ofarafal.shizucleaner.shizuku.ShizukuClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,7 +29,7 @@ class DebloatRepository(private val ctx: Context, private val shell: ShizukuClie
     /** Stan systemu jest jedynym źródłem prawdy — lista "do przywrócenia" nie wymaga własnego logu. */
     suspend fun loadApps(): List<AppEntry> = withContext(Dispatchers.IO) {
         val pm = ctx.packageManager
-        val protectedPkgs = protectedPackages()
+        val protectedPkgs = protectedPackages(ctx)
 
         val raw: List<ApplicationInfo> = if (Build.VERSION.SDK_INT >= 33) {
             pm.getInstalledApplications(
@@ -118,30 +114,4 @@ class DebloatRepository(private val ctx: Context, private val shell: ShizukuClie
     }
 
     private fun fail(app: AppEntry, msg: String) = ActionResult(app.pkg, app.label, false, msg)
-
-    /** Aplikacje, których usunięcie odcięłoby użytkownika od telefonu: ta aplikacja, launchery, klawiatura, dialer, SMS. */
-    private fun protectedPackages(): Set<String> {
-        val pm = ctx.packageManager
-        val set = mutableSetOf(ctx.packageName)
-
-        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        runCatching {
-            pm.queryIntentActivities(home, 0).forEach { set += it.activityInfo.packageName }
-        }
-        runCatching {
-            pm.resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY)
-                ?.activityInfo?.packageName?.let { set += it }
-        }
-        runCatching {
-            Settings.Secure.getString(ctx.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
-                ?.substringBefore('/')?.takeIf { it.isNotEmpty() }?.let { set += it }
-        }
-        runCatching {
-            ctx.getSystemService(TelecomManager::class.java)?.defaultDialerPackage?.let { set += it }
-        }
-        runCatching {
-            Telephony.Sms.getDefaultSmsPackage(ctx)?.let { set += it }
-        }
-        return set
-    }
 }

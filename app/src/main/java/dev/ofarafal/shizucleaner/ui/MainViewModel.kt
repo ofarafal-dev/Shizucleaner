@@ -3,12 +3,12 @@ package dev.ofarafal.shizucleaner.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.ofarafal.shizucleaner.ShizuApp
 import dev.ofarafal.shizucleaner.data.ActionResult
 import dev.ofarafal.shizucleaner.data.AppEntry
 import dev.ofarafal.shizucleaner.data.DebloatRepository
 import dev.ofarafal.shizucleaner.data.PkgAction
 import dev.ofarafal.shizucleaner.data.Risk
-import dev.ofarafal.shizucleaner.shizuku.ShizukuClient
 import dev.ofarafal.shizucleaner.update.CheckResult
 import dev.ofarafal.shizucleaner.update.Updater
 import android.content.Intent
@@ -69,7 +69,7 @@ data class UiState(
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val client = ShizukuClient(app)
+    private val client = (app as ShizuApp).shizuku
     private val repo = DebloatRepository(app, client)
 
     val shizukuState = client.state
@@ -80,7 +80,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = app.getSharedPreferences("settings", 0)
 
     init {
-        client.start()
         refresh()
         val auto = prefs.getBoolean(KEY_AUTO_CHECK, true)
         _ui.update { it.copy(update = it.update.copy(autoCheck = auto)) }
@@ -181,10 +180,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _ui.update { it.copy(progress = null, results = results, selected = emptySet()) }
             refresh()
         }
-    }
-
-    override fun onCleared() {
-        client.stop()
     }
 
     private companion object {

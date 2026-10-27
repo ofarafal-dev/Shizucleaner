@@ -41,7 +41,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew --no-daemon assembleRelease -PappVersionCode=${{ github.run_number }}
+        run: ./gradlew --no-daemon testDebugUnitTest assembleRelease -PappVersionCode=${{ github.run_number }}
 
       - name: Publish release
         env:
@@ -49,6 +49,6 @@ jobs:
         run: |
           cp app/build/outputs/apk/release/app-release.apk ShizuCleaner.apk
           gh release create "v${{ github.run_number }}" ShizuCleaner.apk \
-            --title "0.1.${{ github.run_number }}" \
+            --title "0.2.${{ github.run_number }}" \
             --notes "Build ${{ github.run_number }}, commit ${GITHUB_SHA::7}" \
             --latest

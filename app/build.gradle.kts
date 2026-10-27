@@ -17,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = appVersionCode
-        versionName = "0.1.$appVersionCode"
+        versionName = "0.2.$appVersionCode"
     }
 
     // Stały klucz z sekretów CI. Bez niego (build lokalny) release podpisuje się kluczem debug,
@@ -71,4 +71,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    testImplementation("junit:junit:4.13.2")
 }

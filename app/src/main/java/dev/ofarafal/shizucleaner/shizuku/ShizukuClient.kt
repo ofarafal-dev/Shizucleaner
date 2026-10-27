@@ -106,6 +106,18 @@ class ShizukuClient(context: Context) {
         ShellResult(code, if (nl >= 0) raw.substring(nl + 1) else "")
     }
 
+    /** Skan plików w serwisie shell (kinds: appdirs, large, dups, apks, emptydirs). Zwraca surowe linie. */
+    suspend fun scan(kind: String, vararg args: String): String = withContext(Dispatchers.IO) {
+        val s = service ?: throw IllegalStateException("Usługa Shizuku nie jest połączona")
+        s.scan(kind, arrayOf(*args))
+    }
+
+    /** Kasowanie ścieżek z nadpisaniem (passes 0..3). Zwraca surowe linie OK/ERR. */
+    suspend fun delete(paths: List<String>, passes: Int): String = withContext(Dispatchers.IO) {
+        val s = service ?: throw IllegalStateException("Usługa Shizuku nie jest połączona")
+        s.delete(paths.toTypedArray(), passes)
+    }
+
     private companion object {
         const val REQUEST_CODE = 1001
     }
