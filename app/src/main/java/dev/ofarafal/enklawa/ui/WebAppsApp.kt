@@ -39,6 +39,17 @@ import dev.ofarafal.enklawa.os.WebApps
 fun WebAppsApp(env: AppEnv) {
     val ctx = LocalContext.current
     var custom by remember { mutableStateOf("") }
+    val zipPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                val files = ctx.contentResolver.openInputStream(uri)!!.use { dev.ofarafal.enklawa.miniapp.MiniApps.readZip(it) }
+                dev.ofarafal.enklawa.miniapp.MiniAppStore.install(env.vault, files)
+            }.onSuccess { Toast.makeText(ctx, "Zainstalowano ${it.name}", Toast.LENGTH_SHORT).show() }
+                .onFailure { Toast.makeText(ctx, "Nie udało się: ${it.message}", Toast.LENGTH_LONG).show() }
+        }
+    }
     val note = when {
         env.vaultName != null -> "Zainstalowane aplikacje zostają w sejfie „${env.vaultName}”."
         env.amnesia -> "Zainstalowane aplikacje znikną po wyjściu (amnezja)."
@@ -78,6 +89,43 @@ fun WebAppsApp(env: AppEnv) {
                     }) { Text("Odinstaluj", color = MaterialTheme.colorScheme.error) }
                 }
             }
+        }
+
+        Text("Mini-aplikacje", color = Xp.Link, modifier = Modifier.padding(top = 4.dp))
+        Text(
+            "Własne narzędzia z paczek .zip (manifest.json + HTML/JS). Działają bez internetu i bez dostępu do czegokolwiek, dopóki im tego nie pozwolisz.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        dev.ofarafal.enklawa.miniapp.MiniAppStore.apps.forEach { m ->
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF1C2530))
+                    .clickable { env.open("mini:" + m.id) }.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                appById("mini:" + m.id)?.let { TileIcon(it, 34.dp) }
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(m.name, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        if (m.permissions.isEmpty()) "bez uprawnień" else m.permissions.joinToString { it.key },
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = {
+                    dev.ofarafal.enklawa.miniapp.MiniAppStore.uninstall(env.vault, m.id)
+                    Toast.makeText(ctx, "Odinstalowano ${m.name}", Toast.LENGTH_SHORT).show()
+                }) { Text("Odinstaluj", color = MaterialTheme.colorScheme.error) }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { zipPicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) }, modifier = Modifier.weight(1f)) { Text("Z pliku .zip") }
+            OutlinedButton(onClick = {
+                runCatching {
+                    dev.ofarafal.enklawa.miniapp.MiniAppStore.install(env.vault, dev.ofarafal.enklawa.miniapp.Examples.passwordGenerator)
+                    dev.ofarafal.enklawa.miniapp.MiniAppStore.install(env.vault, dev.ofarafal.enklawa.miniapp.Examples.todo)
+                }.onSuccess { Toast.makeText(ctx, "Zainstalowano przykłady", Toast.LENGTH_SHORT).show() }
+                    .onFailure { Toast.makeText(ctx, "Błąd: ${it.message}", Toast.LENGTH_LONG).show() }
+            }, modifier = Modifier.weight(1f)) { Text("Przykłady") }
         }
 
         Text("Polecane", color = Xp.Link, modifier = Modifier.padding(top = 4.dp))

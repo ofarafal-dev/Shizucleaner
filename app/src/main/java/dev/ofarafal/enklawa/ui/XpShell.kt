@@ -106,7 +106,8 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
 
     androidx.compose.runtime.DisposableEffect(vault) {
         AppStore.load(vault)
-        onDispose { AppStore.clear() }
+        dev.ofarafal.enklawa.miniapp.MiniAppStore.load(vault)
+        onDispose { AppStore.clear(); dev.ofarafal.enklawa.miniapp.MiniAppStore.clear() }
     }
 
     BackHandler(enabled = startOpen) { startOpen = false }
@@ -162,14 +163,15 @@ fun XpShell(amnesia: Boolean, vaultName: String?, profile: BrowserProfile, vault
                 Modifier.padding(start = 10.dp, top = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                val installedIds = AppStore.apps.map { it.id }
+                val installedIds = AppStore.apps.map { it.id } + dev.ofarafal.enklawa.miniapp.MiniAppStore.apps.map { "mini:" + it.id }
                 (desktopIds + installedIds).mapNotNull { appById(it) }.forEach { app ->
                     val inst = AppStore.apps.firstOrNull { it.id == app.id }
                     DesktopIcon(
                         app,
                         onClick = { open(app.id) },
                         onRemove = { desktopIds = desktopIds - app.id },
-                        onUninstall = inst?.let { i -> { AppStore.uninstall(vault, i.url) } },
+                        onUninstall = inst?.let { i -> { AppStore.uninstall(vault, i.url) } }
+                            ?: app.id.takeIf { it.startsWith("mini:") }?.let { mid -> { dev.ofarafal.enklawa.miniapp.MiniAppStore.uninstall(vault, mid.removePrefix("mini:")) } },
                     )
                 }
             }
@@ -627,7 +629,7 @@ private fun StartMenu(amnesia: Boolean, vaultName: String?, onAddToDesktop: (Str
                             AppRegistry.forEach { app ->
                                 MenuLine(app.title, app, enabled = app.available, onAddToDesktop = { onAddToDesktop(app.id) }) { onLaunch(app.id) }
                             }
-                            AppStore.apps.mapNotNull { appById(it.id) }.forEach { app ->
+                            (AppStore.apps.map { it.id } + dev.ofarafal.enklawa.miniapp.MiniAppStore.apps.map { "mini:" + it.id }).mapNotNull { appById(it) }.forEach { app ->
                                 MenuLine(app.title, app) { onLaunch(app.id) }
                             }
                         } else {

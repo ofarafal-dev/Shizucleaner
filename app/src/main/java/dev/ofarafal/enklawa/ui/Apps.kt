@@ -58,6 +58,11 @@ private val TilePalette = listOf(
 /** Aplikacje z rejestru albo strony otwarte jako aplikacje (id „web:<adres>”; zainstalowane mają nazwę i ikonę z katalogu). */
 fun appById(id: String): AppDef? =
     AppRegistry.firstOrNull { it.id == id }
+        ?: id.removePrefix("mini:").takeIf { id.startsWith("mini:") }?.let { mid ->
+            val m = dev.ofarafal.enklawa.miniapp.MiniAppStore.find(mid)
+            val (top, bottom) = TilePalette[(mid.hashCode() and 0x7fffffff) % TilePalette.size]
+            AppDef(id, m?.name ?: mid, Glyph.Apps, top, bottom, content = { MiniAppView(it, mid) }, letter = AppCatalog.initial(m?.name ?: mid))
+        }
         ?: WebApps.urlOf(id)?.let { url ->
             val installed = AppStore.find(url)
             val title = installed?.name ?: WebApps.titleFor(url)
