@@ -50,6 +50,15 @@ class MainActivity : ComponentActivity() {
     private var vaultName by mutableStateOf<String?>(null)
     private var stoppedAt: Long? = null
 
+    // Zgoda na powiadomienia (Android 13+): bez niej usługa w tle nadal działa, tylko jej powiadomienia nie widać.
+    private val notifPermission = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+
+    private fun askNotifications() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) runCatching { notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -89,6 +98,7 @@ class MainActivity : ComponentActivity() {
         runCatching { BrowserProfile.sweepLeftovers() }
         val s = WorldSession.start((application as EnklawaApp).sessionParent)
         val p = BrowserProfile.create(persistent = !amnesiaMode)
+        askNotifications()
         dev.ofarafal.enklawa.tor.TorManager.begin(applicationContext)
         s.onEnd { p.destroy() }
         session = s
@@ -103,6 +113,7 @@ class MainActivity : ComponentActivity() {
         val dataDir = (application as EnklawaApp).vaults.dataDir(info.id)
         val s = WorldSession.openVault(dataDir, key)
         val p = BrowserProfile.create(persistent = false)
+        askNotifications()
         dev.ofarafal.enklawa.tor.TorManager.begin(applicationContext)
         s.onEnd { p.destroy() }
         session = s

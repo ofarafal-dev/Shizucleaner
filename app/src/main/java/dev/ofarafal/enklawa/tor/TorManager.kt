@@ -130,6 +130,7 @@ object TorManager {
             val intent = Intent(app, TorService::class.java)
             app.startService(intent.setAction(TorService.ACTION_START))
             app.bindService(Intent(app, TorService::class.java), conn, Context.BIND_AUTO_CREATE)
+            runCatching { androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, TorKeepAliveService::class.java)) }
         }.onFailure { state = State.Failed(it.message ?: "Nie można uruchomić Tora") }
     }
 
@@ -245,6 +246,7 @@ object TorManager {
         connection = null
         service = null
         runCatching { app.stopService(Intent(app, TorService::class.java)) }
+        runCatching { app.stopService(Intent(app, TorKeepAliveService::class.java)) }
         state = State.Off
     }
 
